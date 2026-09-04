@@ -1,0 +1,25 @@
+apiVersion: observability.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  name: test-endpoints-only
+  namespace: openshift-logging
+  labels:
+    rhol-verify: "LOG-9994"
+spec:
+  serviceAccount:
+    name: log-collector
+  outputs:
+  - name: es-multi
+    type: elasticsearch
+    elasticsearch:
+      endpoints:
+      - "http://es-node-1.openshift-logging.svc:9200"
+      - "http://es-node-2.openshift-logging.svc:9800"
+      index: "application-write"
+      version: 8
+  pipelines:
+  - name: app-logs
+    inputRefs:
+    - application
+    outputRefs:
+    - es-multi

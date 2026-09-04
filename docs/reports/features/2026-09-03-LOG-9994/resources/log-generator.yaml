@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-log-gen
+  labels:
+    rhol-verify: "LOG-9994"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: log-generator
+  namespace: test-log-gen
+  labels:
+    rhol-verify: "LOG-9994"
+spec:
+  restartPolicy: Never
+  containers:
+  - name: generator
+    image: busybox
+    command:
+    - sh
+    - -c
+    - |
+      for i in $(seq 1 100); do
+        echo "{\"message\":\"verify-LOG-9994-test-$i\",\"level\":\"info\",\"iteration\":$i}"
+        sleep 1
+      done
