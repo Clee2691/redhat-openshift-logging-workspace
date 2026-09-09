@@ -7,11 +7,6 @@ argument-hint: <JIRA-ID>
 ## Name
 verify-bug-fix
 
-## Synopsis
-```
-/verify-bug-fix <JIRA-ID>
-```
-
 ## Description
 The `verify-bug-fix` command verifies that a bug fix resolves the reported issue. It fetches JIRA details, finds linked PRs, runs verification on the cluster, and presents raw evidence for human review before generating a JIRA summary.
 
@@ -22,16 +17,9 @@ This command is particularly useful for:
 
 ## Requirements
 
-Environment variables in `~/.claude/settings.json`:
-```json
-{
-  "env": {
-    "JIRA_TOKEN": "<your-jira-api-token>",
-    "JIRA_EMAIL": "<your-email>",
-    "JIRA_URL": "https://redhat.atlassian.net"
-  }
-}
-```
+The shell environment must provide `JIRA_TOKEN`, `JIRA_EMAIL`, and
+`JIRA_URL`. If any is missing, report that it must be configured and stop
+without printing credential values.
 
 Additionally:
 - `gh` CLI authenticated for GitHub access
@@ -50,7 +38,7 @@ echo "JIRA_EMAIL: ${JIRA_EMAIL:-NOT SET}"
 echo "JIRA_TOKEN: ${JIRA_TOKEN:+configured}"
 ```
 
-If any are missing, tell the user to add them to `~/.claude/settings.json` under `env` and stop.
+If any are missing, tell the user to configure them in the shell environment and stop.
 
 ### Step 2: Fetch JIRA Issue
 
@@ -192,7 +180,7 @@ Present the summary to the user for copy-paste to JIRA.
 ## Error Handling
 
 ### Missing Environment Variables
-Tell user to configure `JIRA_TOKEN`, `JIRA_EMAIL`, `JIRA_URL` in `~/.claude/settings.json`.
+Tell the user to configure `JIRA_TOKEN`, `JIRA_EMAIL`, and `JIRA_URL` in the shell environment.
 
 ### JIRA Auth Failure (401/403)
 Tell user to check token validity.
@@ -205,15 +193,3 @@ Ask user to provide PR link manually.
 
 ### GitHub API Errors
 Fall back to `gh pr view` or ask user for PR details.
-
-## Examples
-
-### Verify a Bug Fix
-```
-/verify-bug-fix LOG-8727
-```
-
-### Verify Another Issue
-```
-/verify-bug-fix LOG-9636
-```

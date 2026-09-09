@@ -17,15 +17,7 @@ Estimate story points for one or more LOG Jira stories using the team's
 calibrated rubric. After estimating, set the story points field and append
 an estimation note to the description.
 
-## Usage
-
-```
-/estimate-story LOG-1234
-/estimate-story LOG-1234 LOG-1235 LOG-1236
-```
-
-Also invoked automatically after creating a new LOG story.
-Works for Stories, Bugs, Tasks, Weaknesses, and Vulnerabilities.
+Invoke automatically after creating a new LOG story.
 
 ## Rubric Location
 
@@ -55,7 +47,7 @@ provided, ask the user for story key(s).
 
 #### 3a. Fetch the story from Jira
 
-Load the `/jira:jira` skill for Jira CLI reference, then fetch the story:
+Fetch the story:
 
 ```bash
 acli jira workitem view LOG-1234 --json
@@ -135,5 +127,5 @@ the estimate.
 - **Story Points field**: `customfield_10028` (number, float)
 - **Project**: `LOG`
 - **Fibonacci scale**: 0, 0.5, 1, 2, 3, 5 (8+ means split the story)
-- **CLI tool**: `acli` (Atlassian CLI) — load `/jira:jira` skill for full command reference
+- **CLI tool**: `acli` (Atlassian CLI)
 - **Custom field writes**: `acli` does not support custom fields; use Jira REST API with `$JIRA_USER` and `$JIRA_TOKEN`

@@ -5,9 +5,7 @@ Red Hat OpenShift Logging provides logging capabilities based for OpenShift. Thi
 
 ## Repositories
 
-The repositories are defined in:
-* load [README.md](./README.md)
-* load @README.md
+Read [README.md](./README.md) for the repository map and workspace setup commands.
 
 ## Cross-Repo Conventions
 
@@ -42,7 +40,7 @@ After brainstorming writes and commits a spec change, **auto-push and open a PR*
 5. Push: `git push <fork-remote> spec/<branch>`
 6. Open the PR with the `spec-only` label:
    ```
-   gh pr create --repo openshift/ols --head <fork-user>:<branch> --base main \
+   gh pr create --repo rhobs/redhat-openshift-logging-workspace --head <fork-user>:<branch> --base main \
      --title "LOG-XXXX <summary>" --body "Spec-only change, pre-push reviewed." \
      --label kind/design
    ```

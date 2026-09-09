@@ -4,8 +4,8 @@ description: >-
   Create or update Jira Epics and Stories from spec changes.
   Reads spec diffs from the current session or a PR, uses
   brainstorming to design the work breakdown, creates/updates
-  issues in Jira, then estimates story points, risk levels,
-  and epic sizes. Splits stories that exceed 5 SP. Use when
+  issues in Jira, then estimates stories and Epics. Splits
+  stories that exceed 5 SP. Use when
   the user says "make jira from spec", "make-jira-from-spec",
   "create jira from spec", "update jira from spec", or wants
   to turn spec changes into tracked Jira work.
@@ -17,7 +17,7 @@ argument-hint: "[PR-URL | LOG-XXXX]"
 Turn spec changes into Jira work items. Reads the `.ai/spec/`
 changes from the current session or a PR, brainstorms the
 decomposition, creates or updates Epics and Stories, then
-estimates and risk-assesses every item.
+estimates every item.
 
 ## Defaults
 
@@ -26,22 +26,9 @@ estimates and risk-assesses every item.
 | Project key | `LOG` |
 | Jira instance | `redhat.atlassian.net` |
 | SP field | `customfield_10028` |
-| Risk Score field | `customfield_10976` |
 | Max story points | 5 (split if above) |
-| CLI tool | `acli` (load `/jira:jira` for reference) |
+| CLI tool | `acli` |
 | Custom field writes | Jira REST API with `$JIRA_USER` and `$JIRA_TOKEN` |
-
-## Invocation
-
-```
-/make-jira-from-spec
-/make-jira-from-spec https://github.com/org/repo/pull/123
-/make-jira-from-spec LOG-1234
-```
-
-Arguments (all optional):
-- **PR URL** — fetch the spec diff from this pull request
-- **Jira key** — existing Epic or Story to update
 
 ## Step 1: Gather Spec Changes
 
@@ -270,30 +257,20 @@ For Epics, omit the User Story section and use:
 Source: {repo}/.ai/spec/{path}
 ```
 
-## Step 7: Estimate and Assess
+## Step 7: Estimate Work Items
 
-After all items are created/updated, run the estimation and
-risk assessment skills on every item. Pass all keys at once
-to each skill.
+After all items are created or updated, run the estimation
+skills on every item. Pass all keys at once to each skill.
 
 ### Stories
 
-Invoke `/estimate-story` with all story keys:
-```
-/estimate-story LOG-1001 LOG-1002 LOG-1003
-```
-
-Invoke `/estimate-risk` with all story keys:
-```
-/estimate-risk LOG-1001 LOG-1002 LOG-1003
-```
+Invoke the `estimate-story` skill with all story keys, for example
+`LOG-1001 LOG-1002 LOG-1003`.
 
 ### Epics
 
-Invoke `/estimate-epic` with all epic keys:
-```
-/estimate-epic LOG-2001
-```
+Invoke the `estimate-epic` skill with all Epic keys, for example
+`LOG-2001`.
 
 ## Step 8: Auto-Split Oversized Stories
 
@@ -337,9 +314,8 @@ Options:
    — same as Step 6
 4. Close or update the original oversized story — add a
    comment noting it was split, link to the new stories
-5. Re-run `/estimate-story` and `/estimate-risk` on the new
-   stories
-6. Re-run `/estimate-epic` on all affected Epics
+5. Re-run `estimate-story` on the new stories
+6. Re-run `estimate-epic` on all affected Epics
 
 ## Step 9: Report
 

@@ -36,23 +36,35 @@ Remove all cloned repos to start fresh (re-clone with `make clone-repos`):
 make remove-repos
 ```
 
+## AI assistants
+
+This workspace supports both Claude Code and Codex when they are started from the workspace root. Shared workspace guidance lives in [AGENTS.md](AGENTS.md); [CLAUDE.md](CLAUDE.md) imports that file so Claude Code receives the same guidance. Shared skills live in [`.claude/skills`](.claude/skills) and are exposed to Codex through [`.agents/skills`](.agents/skills).
+
+| Action | Claude Code | Codex |
+| --- | --- | --- |
+| Invoke a workspace skill | `/skill-name ...` | `$skill-name ...` |
+| Inspect loaded project guidance | `/memory` | Ask Codex to summarize the loaded project instructions. |
+| Inspect available skills | `/skills` | `/skills` |
+
+Run either assistant from this workspace when work spans repositories. When opening a component repository directly, follow that repository's local instructions if it provides them; component-level parity is intentionally separate work.
+
 ## Specs
 
 All specifications live in `.ai/spec/`. Start with [`.ai/spec/README.md`](.ai/spec/README.md) for the product overview and reading guide. Use [`.ai/spec/how/repo-map.md`](.ai/spec/how/repo-map.md) to find which repo and spec file to update for a given concern.
 
-1. Create spec: a new spec files should be created with `/superpowers:brainstorming` [skill](https://github.com/obra/superpowers/tree/main).
+1. Create spec: new spec files should be created with the [`superpowers:brainstorming` skill](https://github.com/obra/superpowers/tree/main).
 
-   ```
-   > /superpowers:brainstorming create or update specs for https://redhat.atlassian.net/browse/LOG-123.
-   ```
+   Claude Code: `/superpowers:brainstorming create or update specs for https://redhat.atlassian.net/browse/LOG-123.`
+
+   Codex: `$superpowers:brainstorming create or update specs for https://redhat.atlassian.net/browse/LOG-123.`
 
    As an input use product requirements or design ideas. The output should be a set of spec files in `.ai/spec/`.
-1. Create Jira tickets: in the same session run `/make-jira-from-spec` skill to create Jira tickets from the spec files.
-1. Implementation: use `/superpowers:brainstorming` skill with the Jira ticket as an input. After the implementation is done ask agent to update the spec files based on the implementation.
+1. Create Jira tickets: in the same session invoke `make-jira-from-spec` to create Jira tickets from the spec files. Use `/make-jira-from-spec` in Claude Code or `$make-jira-from-spec` in Codex.
+1. Implementation: use `superpowers:brainstorming` with the Jira ticket as input. After implementation, ask the agent to update the spec files based on the implementation.
 
 ### Create initial spec files
 
-The `/spec-first:init` [skill](https://github.com/joshuawilson/spec-first) was used to create initial set of spec files. To install the `spec-first` plugin, run:
+The Claude Code-only [`/spec-first:init` skill](https://github.com/joshuawilson/spec-first) was used to create the initial set of spec files. It is not required for ongoing workspace workflows. To install the `spec-first` plugin in Claude Code, run:
 
 ```bash
 /plugin marketplace add joshuawilson/spec-first
@@ -67,4 +79,4 @@ not supported.
 
 - **Jira**: Project key `LOG` on `redhat.atlassian.net`
 - **Git workflow**: Fork-based — push to your fork, PR against `origin/main`, squash before pushing
-- **Per-repo guides**: Each repo has an `AGENTS.md` with repo-specific conventions
+- **Per-repo guides**: Follow a repository's `AGENTS.md` when it is present
