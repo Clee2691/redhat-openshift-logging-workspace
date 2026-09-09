@@ -1,4 +1,4 @@
-.PHONY: clone-repos pull-repos remove-repos lint lint-fix help
+.PHONY: clone-repos pull-repos remove-repos lint lint-fix help sync-skills lint-symlinks
 
 SKILLSAW_IMAGE := ghcr.io/stbenjam/skillsaw:latest
 
@@ -53,6 +53,48 @@ lint:
 lint-fix:
 	@docker run --rm -v "$$(pwd):/workspace:Z" $(SKILLSAW_IMAGE) fix
 
+# Lint the skills symlinks in .agents/skills
+lint-symlinks:
+	@errors=0; \
+	for skill in .claude/skills/*; do \
+		[ -e "$$skill" ] || continue; \
+		name="$$(basename "$$skill")"; \
+		target=".agents/skills/$$name"; \
+		if [ ! -L "$$target" ]; then \
+			echo "Error: Missing symlink in .agents/skills for '$$name'"; \
+			errors=$$((errors + 1)); \
+		elif [ ! -e "$$target" ]; then \
+			echo "Error: Broken symlink in .agents/skills for '$$name'"; \
+			errors=$$((errors + 1)); \
+		fi; \
+	done; \
+	for link in .agents/skills/*; do \
+		if [ -L "$$link" ] && [ ! -e "$$link" ]; then \
+			echo "Error: Dangling symlink found at '$$link'"; \
+			errors=$$((errors + 1)); \
+		fi; \
+	done; \
+	if [ $$errors -gt 0 ]; then \
+		echo "Found $$errors skill symlink issue(s)."; \
+		exit 1; \
+	fi; \
+	echo "All skill symlinks are present and valid."
+
+# Sync the skills from .claude/skills to .agents/skills through symlinks
+sync-skills:
+	@mkdir -p .agents/skills
+	@for skill in .claude/skills/*; do \
+		[ -e "$$skill" ] || continue; \
+		name="$$(basename "$$skill")"; \
+		target=".agents/skills/$$name"; \
+		if [ ! -e "$$target" ] && [ ! -L "$$target" ]; then \
+			ln -s "../../$$skill" "$$target"; \
+			echo "Linked: $$name"; \
+		else \
+			echo "Skipped: $$name (already exists)"; \
+		fi; \
+	done
+
 help:
 	@echo "Available targets:"
 	@echo "  clone-repos    - Clone all workspace repos into this directory"
@@ -60,4 +102,6 @@ help:
 	@echo "  remove-repos   - Delete all cloned repos to start fresh"
 	@echo "  lint           - Run skillsaw linter (Docker)"
 	@echo "  lint-fix       - Auto-fix fixable issues"
+	@echo "  sync-skills    - Sync skills from .claude/skills to .agents/skills"
+	@echo "  lint-symlinks  - Lint skills symlinks in .agents/skills"
 	@echo "  help           - Show this help"

@@ -1,0 +1,17 @@
+name: Lint Skill Symlinks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  lint-symlinks:
+    name: Lint Skill Symlinks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify Skill Symlinks
+        run: make lint-symlinks
