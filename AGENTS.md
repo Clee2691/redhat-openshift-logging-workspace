@@ -33,7 +33,7 @@ After brainstorming writes and commits a spec change, **auto-push and open a PR*
     - Internal contradictions between sections or spec files
     - Inconsistencies with existing specs (cross-reference `.ai/spec/` files touched vs untouched)
     - Broken or dangling cross-references between spec files
-    - Placeholder text (TBD, TODO, FIXME, incomplete sections)
+    - Placeholder text (unresolved "to be decided" notes, unfinished-work markers, incomplete sections)
     - Formatting or structural issues
     - Scope creep beyond what was discussed in brainstorming
     - If issues are found: fix them, amend the commit, and re-review
@@ -55,4 +55,4 @@ Each repo's `AGENTS.md` is authoritative for that repo. This file provides the m
 
 ## Specs
 
-All specifications live in `.ai/spec/`. Start with `.ai/spec/README.md` for product overview, reading order, and structure guide. Use `.ai/spec/how/repo-map.md` to quickly find which repo and spec file to update for a given concern.
+All specifications live in `.ai/spec/`. Start with [`.ai/spec/README.md`](.ai/spec/README.md) for product overview, reading order, and structure guide. Use [`.ai/spec/how/repo-map.md`](.ai/spec/how/repo-map.md) to quickly find which repo and spec file to update for a given concern.

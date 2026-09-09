@@ -4,7 +4,8 @@ description: >
   Size LOG Jira Epics in sprint units based on the total story points
   (days) of their child issues. 1 epic SP = 1 sprint = 3 weeks (15 working
   days). Can size specific Epics, or bulk-size all unsized Epics.
-  Also invoked automatically after creating a new Epic.
+  Use when the user asks to size, estimate, or point a LOG Epic, or
+  automatically after creating a new Epic.
 argument-hint: "[LOG-1234 ...] (omit to size all unsized Epics)"
 ---
 

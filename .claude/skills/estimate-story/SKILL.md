@@ -4,7 +4,8 @@ description: >
   Estimate story points for LOG Jira stories using the calibrated rubric
   derived from 300 completed stories. Fetches the story, applies the decision
   tree, sets the SP field, and appends the estimate to the description.
-  Use for on-demand estimation or after creating a new story.
+  Use when the user asks to estimate or point a LOG story, for
+  on-demand estimation, or after creating a new story.
 argument-hint: "LOG-1234 [LOG-1235 ...]"
 ---
 

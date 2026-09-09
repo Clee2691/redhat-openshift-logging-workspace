@@ -1,5 +1,6 @@
 ---
-description: Verify a JIRA bug fix on an OpenShift cluster — fetches issue details, finds linked PRs, runs tests, presents raw evidence for human review, then generates a JIRA-ready summary
+name: verify-bug-fix
+description: Verify a JIRA bug fix on an OpenShift cluster — fetches issue details, finds linked PRs, runs tests, presents raw evidence for human review, then generates a JIRA-ready summary. Use when the user asks to verify a bug fix or JIRA issue on a cluster.
 argument-hint: <JIRA-ID>
 ---
 
