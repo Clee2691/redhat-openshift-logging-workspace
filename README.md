@@ -15,6 +15,7 @@ Cross-repo workspace for Red Hat OpenShift Logging — shared specs, routing, an
 | [log-file-metric-exporter](https://github.com/viaq/log-file-metric-exporter)                                   | Prometheus exporter for pod log file byte volume; deployed by CLO as a DaemonSet |
 | [logging-ui-plugin](https://github.com/openshift/logging-view-plugin)                                          | Logging OpenShift UI plugin                                   |
 | [openshift-logging-e2e-tests](https://github.com/openshift-eng/openshift-logging-e2e-tests)                    | E2E tests for OpenShift Logging                               |
+| [release](https://github.com/openshift/release)                                                                | OpenShift CI jobs for the logging repos in ci-operator/config/openshift/cluster-logging-operator, openshift/loki, openshift-eng/openshift-logging-e2e-tests, viaq/vector, viaq/log-file-metric-exporter, openshift/logging-view-plugin, openshift/eventrouter |
 
 ## Setup
 
@@ -23,6 +24,8 @@ Clone all repos into this directory:
 ```bash
 make clone-repos
 ```
+
+Repos are cloned over SSH (`git@github.com:`), so a GitHub SSH key must be configured.
 
 Pull latest changes in all repos:
 

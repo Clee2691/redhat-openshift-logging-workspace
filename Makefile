@@ -10,11 +10,14 @@ REPOS = \
 	viaq/log-file-metric-exporter \
 	openshift/logging-view-plugin \
 	openshift/openshift-docs \
-	openshift-eng/openshift-logging-e2e-tests
+	openshift-eng/openshift-logging-e2e-tests \
+	openshift/release
 
 REPO_DIRS = $(foreach r,$(REPOS),$(notdir $(r)))
 
-# Clone all workspace repos into this directory (HTTPS — works in both local and CI)
+# Clone all workspace repos into this directory (SSH — needs a GitHub SSH key;
+# CI runners without one can map to HTTPS with
+# git config --global url."https://github.com/".insteadOf "git@github.com:")
 # openshift-docs: --single-branch --branch to clone the standalone logging docs branch
 clone-repos:
 	@for repo in $(REPOS); do \
@@ -24,7 +27,7 @@ clone-repos:
 	  else \
 	    flags=""; \
 	    if [ "$$name" = "openshift-docs" ]; then flags="--single-branch --branch standalone-logging-docs-main"; fi; \
-	    git clone $$flags https://github.com/$$repo.git; \
+	    git clone $$flags git@github.com:$$repo.git; \
 	  fi; \
 	done
 
