@@ -34,25 +34,33 @@ The ClusterLogForwarder CR defines which logs are collected. The collector (Vect
 14. Receiver inputs support TLS configuration. If no TLS cert/key is provided, the operator auto-provisions certificates from the cluster's cert signing service. `[GA]`
 15. Receiver inputs are only supported on HyperShift or with Red Hat products running on the same cluster (e.g., OpenShift Virtualization, RHOSO). `[GA, limited scope]`
 
+### Timestamp-Based Historical-Log Filtering
+
+16. A `drop` filter with `olderThan` compares each normalized event's `.timestamp` to its configured cutoff and drops events strictly older than that cutoff. `[PLANNED: LOG-9876]`
+17. The cutoff accepts either an ISO 8601 timestamp with an explicit offset or a date-only `YYYY-MM-DD` value; a date-only value represents midnight UTC on that date. `[PLANNED: LOG-9876]`
+18. Timestamp-based dropping works for application, infrastructure container, infrastructure journal, and audit input records when their pipeline references the filter. `[PLANNED: LOG-9876]`
+19. Records with an absent or unparseable event timestamp are retained. `[PLANNED: LOG-9876]`
+20. This filter runs after Vector reads and normalizes a record. It does not prevent historical records from being read or decoded, and it applies after a restart as well as initial collection. `[PLANNED: LOG-9876]`
+
 ### Collector Deployment
 
-16. The collector is deployed as a DaemonSet when collecting node-level logs (application, infrastructure, audit). `[GA]`
-17. The collector is deployed as a Deployment when acting as a receiver only (no node-level collection). `[GA]`
-18. Collector resource requests/limits (CPU, memory) are configurable via `spec.collector.resources`. `[GA]`
-19. Collector supports `nodeSelector`, `tolerations`, and `affinity` for scheduling. `[GA]` (affinity new in 6.3)
-20. Collector log level is configurable. `[GA]`
-21. Collector supports `maxUnavailable` for rolling update strategy. `[GA]`
-22. Collector supports `terminationGracePeriodSeconds`. `[GA]`
-23. Collector supports `networkPolicy` configuration. `[GA]`
-24. `managementState` can be set to `Unmanaged` to prevent the operator from reconciling the collector. `[GA]`
+21. The collector is deployed as a DaemonSet when collecting node-level logs (application, infrastructure, audit). `[GA]`
+22. The collector is deployed as a Deployment when acting as a receiver only (no node-level collection). `[GA]`
+23. Collector resource requests/limits (CPU, memory) are configurable via `spec.collector.resources`. `[GA]`
+24. Collector supports `nodeSelector`, `tolerations`, and `affinity` for scheduling. `[GA]` (affinity new in 6.3)
+25. Collector log level is configurable. `[GA]`
+26. Collector supports `maxUnavailable` for rolling update strategy. `[GA]`
+27. Collector supports `terminationGracePeriodSeconds`. `[GA]`
+28. Collector supports `networkPolicy` configuration. `[GA]`
+29. `managementState` can be set to `Unmanaged` to prevent the operator from reconciling the collector. `[GA]`
 
 ### Log File Metric Exporter
 
-25. `LogFileMetricExporter` CR exposes Prometheus metrics about per-container log file volume. CLO reconciles the CR and deploys a separate DaemonSet running the exporter binary. The exporter's metric, label, flag, and auth contract is specified in `what/log-file-metric-exporter.md`. `[GA]`
+30. `LogFileMetricExporter` CR exposes Prometheus metrics about per-container log file volume. CLO reconciles the CR and deploys a separate DaemonSet running the exporter binary. The exporter's metric, label, flag, and auth contract is specified in `what/log-file-metric-exporter.md`. `[GA]`
 
 ### Kubernetes Event Router
 
-26. The Kubernetes Event Router watches Kubernetes events and writes them to stdout for collection as infrastructure logs. It is deployed manually and is not managed by the operator — see `what/event-router.md`. `[GA]`
+31. The Kubernetes Event Router watches Kubernetes events and writes them to stdout for collection as infrastructure logs. It is deployed manually and is not managed by the operator — see `what/event-router.md`. `[GA]`
 
 ## Configuration Surface
 
