@@ -6,6 +6,9 @@ GIT_BASE_URL     ?= git@github.com:
 SKILLS_SRC_DIR   ?= .claude/skills
 SKILLS_DST_DIR   ?= .agents/skills
 
+# On Linux, append :Z for SELinux relabeling; on macOS/others, mount without it
+VOLUME_FLAG := $(if $(filter Linux,$(shell uname -s)),:Z,)
+
 REPOS = \
     viaq/vector \
     openshift/cluster-logging-operator \
@@ -53,11 +56,12 @@ remove-repos:
 
 ## lint: Run skillsaw linter (Docker or Podman)
 lint:
-	@$(CONTAINER_ENGINE) run --rm -v "$(CURDIR):/workspace:Z" $(SKILLSAW_IMAGE) lint --strict $(SKILLSAW_ARGS)
+	@$(CONTAINER_ENGINE) run --rm -v "$(CURDIR):/workspace$(VOLUME_FLAG)" $(SKILLSAW_IMAGE) lint --strict $(SKILLSAW_ARGS)
+
 
 ## lint-fix: Auto-fix fixable issues
 lint-fix:
-	@$(CONTAINER_ENGINE) run --rm -v "$(CURDIR):/workspace:Z" $(SKILLSAW_IMAGE) fix
+  @$(CONTAINER_ENGINE) run --rm -v "$(CURDIR):/workspace$(VOLUME_FLAG)" $(SKILLSAW_IMAGE) fix
 
 ## lint-symlinks: Lint skills symlinks in target directory
 lint-symlinks:
