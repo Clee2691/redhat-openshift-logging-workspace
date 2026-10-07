@@ -61,7 +61,7 @@ lint:
 
 ## lint-fix: Auto-fix fixable issues
 lint-fix:
-  @$(CONTAINER_ENGINE) run --rm -v "$(CURDIR):/workspace$(VOLUME_FLAG)" $(SKILLSAW_IMAGE) fix
+	@$(CONTAINER_ENGINE) run --rm -v "$(CURDIR):/workspace$(VOLUME_FLAG)" $(SKILLSAW_IMAGE) fix
 
 ## lint-symlinks: Lint skills symlinks in target directory
 lint-symlinks:
