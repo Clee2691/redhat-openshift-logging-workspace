@@ -8,3 +8,5 @@ openshift-docs/
 openshift-logging-e2e-tests/
 release/
 vector/
+
+.claude/settings.local.json

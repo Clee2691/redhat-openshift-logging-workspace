@@ -16,7 +16,7 @@ The ClusterLogForwarder CR defines how collected logs are transformed and routed
 
 6. **`lokiStack`** — forwards to a managed LokiStack instance in the same cluster via OTLP/HTTP. Supports label key selection and tenant key templating. `[GA]`
 7. **`loki`** — forwards to an external Loki deployment via REST HTTP/HTTPS. Supports label keys and tenant key templating. `[GA]`
-8. **`elasticsearch`** — forwards to Elasticsearch (versions 6, 7, 8, 9) via HTTP. Supports index name templating. `[GA]`
+8. **`elasticsearch`** — forwards to Elasticsearch (versions 6, 7, 8, 9) via HTTP. Supports index name templating. Supports multiple endpoints for load distribution and automatic failover (Vector P2C load balancing). `[GA]`
 9. **`kafka`** — forwards to Kafka (0.11+) via TCP or TLS. Supports SASL authentication and topic templating. `[GA]`
 10. **`splunk`** — forwards to Splunk via HEC (HTTP Event Collector). Supports index, source, sourceType templating and indexed fields. `[GA]`
 11. **`syslog`** — forwards via RFC 3164 or RFC 5424 over TCP, TLS, or UDP. Supports field templating for severity, facility, appName, procId, msgId. `[GA]`
