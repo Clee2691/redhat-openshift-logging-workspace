@@ -2,6 +2,9 @@
 
 SKILLSAW_IMAGE := ghcr.io/stbenjam/skillsaw:latest
 
+# On Linux, append :Z for SELinux relabeling; on macOS/others, mount without it
+VOLUME_FLAG := $(if $(filter Linux,$(shell uname -s)),:Z,)
+
 REPOS = \
 	viaq/vector \
 	openshift/cluster-logging-operator \
@@ -51,10 +54,10 @@ remove-repos:
 	@echo "Done. Run 'make clone-repos' to re-clone."
 
 lint:
-	@docker run --rm -v "$$(pwd):/workspace:Z" $(SKILLSAW_IMAGE) lint --strict $(SKILLSAW_ARGS)
+	@docker run --rm -v "$$(pwd):/workspace$(VOLUME_FLAG)" $(SKILLSAW_IMAGE) lint --strict $(SKILLSAW_ARGS)
 
 lint-fix:
-	@docker run --rm -v "$$(pwd):/workspace:Z" $(SKILLSAW_IMAGE) fix
+	@docker run --rm -v "$$(pwd):/workspace$(VOLUME_FLAG)" $(SKILLSAW_IMAGE) fix
 
 # Lint the skills symlinks in .agents/skills
 lint-symlinks:
