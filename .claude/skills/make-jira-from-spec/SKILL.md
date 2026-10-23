@@ -27,6 +27,7 @@ estimates every item.
 | Jira instance | `redhat.atlassian.net` |
 | SP field | `customfield_10028` |
 | Max story points | 5 (split if above) |
+| Components | `Log Collection` or `Log Storage` (Step 2) |
 | CLI tool | `acli` |
 | Custom field writes | Jira REST API with `$JIRA_USER` and `$JIRA_TOKEN` |
 
@@ -90,6 +91,28 @@ Feed the brainstorming session with:
 The brainstorming output is the proposed work breakdown —
 it is NOT yet approved for Jira creation.
 
+### Component
+
+Determine the Jira component for the issues from the spec
+content:
+
+- **Log Collection** — collecting, normalizing, or
+  forwarding logs: Vector, ClusterLogForwarder
+  inputs/pipelines/outputs, event router, OTEL collector,
+  log-file-metric-exporter, message truncation, CLO
+- **Log Storage** — storing or exposing logs for querying:
+  LokiStack, Loki operator, retention, tenancy, object
+  storage
+
+One component covers the whole run. If the changes span
+both areas, or neither clearly fits, ask the user:
+
+> Which component should these issues get —
+> Log Collection or Log Storage?
+
+Do not guess. The component appears in the Step 5 proposal
+and is set on every created issue in Step 6.
+
 ## Step 3: Resolve Parent
 
 Determine the parent for new Stories based on what the
@@ -149,6 +172,7 @@ Present the full plan to the user:
 ```
 Spec changes: {list of changed spec files}
 Parent: {PARENT_KEY} — {parent summary}
+Component: {Log Collection | Log Storage}
 
 ## New Items
 
@@ -195,15 +219,19 @@ After creating the item, link it to its parent Epic:
 acli jira workitem link create --out "{newly created key}" --in "{parent key}" --type "Epic"
 ```
 
-Immediately after creating each item, transition it from
-**New** to **Refinement** (transition ID `31`):
+Set the component on every created item. `acli` does not
+support components — use the REST API:
 
 ```bash
-acli jira workitem transition --key "{newly created key}" --status "Refinement"
+curl -s -X PUT "https://redhat.atlassian.net/rest/api/3/issue/{newly created key}" \
+  -u "$JIRA_USER:$JIRA_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"fields": {"components": [{"name": "{component}"}]}}'
 ```
 
-This applies to every created Epic and Story. Do not leave
-any item in New status.
+Do NOT transition created items. Leave every Epic and Story
+in its initial status — Stories have no Refinement status
+in this project.
 
 ### Updating items
 
@@ -216,6 +244,10 @@ acli jira workitem edit --key "LOG-XXXX" --description "{updated description}"
 Preserve any content in the existing description that is not
 being replaced. Append new AC, update changed sections, do
 not remove sections the spec didn't touch.
+
+If an updated issue has no component set, add the run's
+component with the same REST call. Never replace a component
+that is already set.
 
 ### Description format
 
@@ -310,8 +342,8 @@ Options:
 
 1. Create new Epic (if proposed) via `acli jira workitem create`
 2. Create the smaller stories via `acli jira workitem create`
-3. Transition every newly created item to **Refinement**
-   — same as Step 6
+3. Set the component on every newly created item — same as
+   Step 6. Do not transition anything.
 4. Close or update the original oversized story — add a
    comment noting it was split, link to the new stories
 5. Re-run `estimate-story` on the new stories
@@ -324,12 +356,12 @@ Print a summary table of everything created and updated:
 ```
 ## Summary
 
-| Key          | Type  | Summary              | SP | Risk | Status  |
-|--------------|-------|----------------------|----|------|---------|
-| LOG-2001 | Epic  | {summary}            | —  | —    | Created |
-| LOG-1001 | Story | {summary}            | 3  | 2    | Created |
-| LOG-1002 | Story | {summary}            | 2  | 1    | Created |
-| LOG-1234 | Story | {summary}            | 3  | 2    | Updated |
+| Key          | Type  | Summary              | Component     | SP | Risk | Status  |
+|--------------|-------|----------------------|---------------|----|------|---------|
+| LOG-2001 | Epic  | {summary}            | {component}   | —  | —    | Created |
+| LOG-1001 | Story | {summary}            | {component}   | 3  | 2    | Created |
+| LOG-1002 | Story | {summary}            | {component}   | 2  | 1    | Created |
+| LOG-1234 | Story | {summary}            | {component}   | 3  | 2    | Updated |
 
 Epics sized: LOG-2001 → 2 sprints (30 SP)
 
@@ -356,8 +388,13 @@ Spec sources:
 - **Spec reference required** — every created item must
   include a Spec Reference section linking back to the
   source spec file.
+- **Component required** — every created issue gets
+  `Log Collection` or `Log Storage`. Determine it from the
+  spec content; ask the user when it is not clear. Never
+  create an issue without a component.
 - **No invented requirements** — only create work items for
   scope that exists in the spec. Do not expand scope.
 - **Custom field writes** — `acli` does not support custom
   fields; use Jira REST API with `$JIRA_USER` and
-  `$JIRA_TOKEN` for fields like story points and risk score.
+  `$JIRA_TOKEN` for fields like story points and risk
+  score. Components are set the same way.
