@@ -1,0 +1,9 @@
+# Artifacts hold run data (raw receiver dumps, prometheus scrapes, per-run
+# reports) plus the exact vector.toml snapshot each variant ran with. Only the
+# configs are committed — the data is large and regenerable by re-running the
+# variant (README.md); the calculated numbers live in RESULTS.md tables.
+artifacts/**
+!artifacts/**/
+!artifacts/baseline-vector.toml
+!artifacts/baseline-collector-config.yaml
+!artifacts/*/vector.toml

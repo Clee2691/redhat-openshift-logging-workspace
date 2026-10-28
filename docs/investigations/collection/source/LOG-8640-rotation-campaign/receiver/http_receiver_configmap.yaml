@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: http-receiver
+  labels:
+    app.kubernetes.io/name: logging-benchmarking
+    app.kubernetes.io/component: receiver
+    app.kubernetes.io/instance: http
+data:
+  vector.toml: |
+    [sources.my_source]
+    type = "http_server"
+    address = "0.0.0.0:8090"
+    decoding.codec = "json"
+    framing.method = "newline_delimited"
+
+    [transforms.route_logs]
+    type = "route"
+    inputs = ["my_source"]
+    route.audit = '.log_type == "audit"'
+    route.container = 'exists(.kubernetes)'
+    route.journal = '!exists(.kubernetes)'
+
+    # Compact goloader events to analysis-only fields (~100B/line).
+    [transforms.stamp]
+    type = "remap"
+    inputs = ["route_logs.container"]
+    drop_on_error = true
+    source = '''
+    m, merr = parse_regex(to_string(.message) ?? "", r'^goloader seq - (?P<pod>\S+) - (?P<seqid>\d+) - ')
+    ts, tserr = parse_timestamp(to_string(."@timestamp") ?? "", format: "%+")
+    if merr == null && tserr == null {
+      t = to_unix_timestamp(ts, unit: "milliseconds")
+      o = to_unix_timestamp(now(), unit: "milliseconds")
+      f = (to_string(.kubernetes.namespace_name) ?? "?") + "_" + (to_string(.kubernetes.pod_name) ?? "?") + "_" + (to_string(.kubernetes.container_name) ?? "?")
+      s = to_int(m.seqid) ?? -1
+      . = { "file": f, "seqid": s, "ts_ms": t, "out_ms": o }
+    } else {
+      mh, mherr = parse_regex(to_string(.message) ?? "", r'^(?P<head>.{0,120})')
+      head = if mherr == null { mh.head } else { "?" }
+      . = { "file": "unparsed", "seqid": -1, "ts_ms": 0, "out_ms": 0, "pod": to_string(.kubernetes.pod_name) ?? "?", "len": length(to_string(.message) ?? ""), "head": head }
+    }
+    '''
+
+    [sinks.container]
+    inputs = ["stamp"]
+    type = "file"
+    path = "/tmp/container/{{file}}.json"
+    healthcheck.enabled = false
+
+    [sinks.container.encoding]
+    codec = "json"
+
+    [sinks.out_journal]
+    inputs = ["route_logs.journal"]
+    type = "file"
+    path = "/tmp/journal/journal.json"
+    healthcheck.enabled = false
+
+    [sinks.out_journal.encoding]
+    codec = "json"
+
+    [sinks.out_audit]
+    inputs = ["route_logs.audit"]
+    type = "file"
+    path = "/tmp/audit/audit.json"
+    healthcheck.enabled = false
+
+    [sinks.out_audit.encoding]
+    codec = "json"
