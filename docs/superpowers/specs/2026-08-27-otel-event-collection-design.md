@@ -1,8 +1,11 @@
 # Replace Eventrouter with OpenTelemetry Event Collection
 
-**Status:** Design  
+**Status:** Design — Jira created, not yet started  
 **Date:** 2026-08-27  
-**Author:** Claude (via superpowers:brainstorming)
+**Author:** Claude (via superpowers:brainstorming)  
+**Source PR:** [rhobs/redhat-openshift-logging-workspace#13](https://github.com/rhobs/redhat-openshift-logging-workspace/pull/13)  
+**Jira:** Epic [LOG-10381](https://redhat.atlassian.net/browse/LOG-10381) "Replace eventrouter with OpenTelemetry event collection" (New), parent Feature [OBSDA-1504](https://redhat.atlassian.net/browse/OBSDA-1504) (New)  
+**Stories:** [LOG-10389](https://redhat.atlassian.net/browse/LOG-10389) eventrouterexporter component · [LOG-10390](https://redhat.atlassian.net/browse/LOG-10390) k8sobjectsreceiver event collection · [LOG-10391](https://redhat.atlassian.net/browse/LOG-10391) preserve JSON format · [LOG-10392](https://redhat.atlassian.net/browse/LOG-10392) opt-in manifests + docs
 
 ## Problem
 

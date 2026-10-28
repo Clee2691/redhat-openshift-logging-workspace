@@ -1,8 +1,11 @@
 # OTEL Collector Migration Design
 
 **Date:** 2026-08-20
-**Status:** Draft
+**Status:** Draft — Jira created, not yet started
 **Canonical spec:** `.ai/spec/what/otel-collector-migration.md`
+**Source PR:** [rhobs/redhat-openshift-logging-workspace#7](https://github.com/rhobs/redhat-openshift-logging-workspace/pull/7)
+**Jira:** Epic [LOG-10380](https://redhat.atlassian.net/browse/LOG-10380) "Tech-Preview: Deploy OTEL Collector from ClusterLogForwarder" (New), parent Feature [OBSDA-1504](https://redhat.atlassian.net/browse/OBSDA-1504) (New)
+**Stories:** [LOG-10383](https://redhat.atlassian.net/browse/LOG-10383) `spec.collector.type` API · [LOG-10384](https://redhat.atlassian.net/browse/LOG-10384) OpenTelemetryCollector CR lifecycle · [LOG-10385](https://redhat.atlassian.net/browse/LOG-10385) validate OTEL Operator presence · [LOG-10386](https://redhat.atlassian.net/browse/LOG-10386) exporter parity · [LOG-10387](https://redhat.atlassian.net/browse/LOG-10387) dual-stack + rollback · [LOG-10388](https://redhat.atlassian.net/browse/LOG-10388) (spike) OTEL vs Vector benchmark
 
 ## Summary
 

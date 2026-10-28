@@ -1,7 +1,7 @@
 # LOG-8336 — Performance cost of sink acknowledgements for journald collection
 
 **Status:** Investigation complete (design input)
-**Jira:** [LOG-8336](https://redhat.atlassian.net/browse/LOG-8336) (spike) · relates to [LOG-7538](https://redhat.atlassian.net/browse/LOG-7538) (fix)
+**Jira:** [LOG-8336](https://redhat.atlassian.net/browse/LOG-8336) (spike, **Closed/Done**) · relates to [LOG-7538](https://redhat.atlassian.net/browse/LOG-7538) (fix, **Assigned/In Progress**)
 **Source:** [rhobs/redhat-openshift-logging-workspace#27](https://github.com/rhobs/redhat-openshift-logging-workspace/pull/27) — `docs/investigations/LOG-8336-journal-acks-perf/`
 **Prior work:** [Clee2691/clo_investigations @ LOG-8336](https://github.com/Clee2691/clo_investigations/blob/LOG-8336/reports/LOG-8336-journal-loss-investigation.md)
 

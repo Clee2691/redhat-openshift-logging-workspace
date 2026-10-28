@@ -1,8 +1,9 @@
 # Elasticsearch Multi-Endpoint Support
 
-**Jira:** [LOG-9994](https://redhat.atlassian.net/browse/LOG-9994) (Story), parent [OBSDA-1368](https://redhat.atlassian.net/browse/OBSDA-1368) (Feature)
+**Jira:** [LOG-9994](https://redhat.atlassian.net/browse/LOG-9994) (Story, **Closed/Done**), parent [OBSDA-1368](https://redhat.atlassian.net/browse/OBSDA-1368) (Feature, Review)
+**Source PR:** [rhobs/redhat-openshift-logging-workspace#15](https://github.com/rhobs/redhat-openshift-logging-workspace/pull/15)
 **Date:** 2026-08-31
-**Status:** Design
+**Status:** Design — implemented (LOG-9994 Closed)
 
 ## Problem
 

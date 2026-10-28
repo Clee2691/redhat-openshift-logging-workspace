@@ -1,6 +1,8 @@
 # OTEL Collector vs Vector — Application Log Performance Comparison
 
-**Status:** Spec approved, pending implementation
+**Status:** Spec approved, pending implementation — Jira created, not yet started
+**Source PR:** [rhobs/redhat-openshift-logging-workspace#30](https://github.com/rhobs/redhat-openshift-logging-workspace/pull/30)
+**Jira:** Spike [LOG-10388](https://redhat.atlassian.net/browse/LOG-10388) (New), under Epic [LOG-10380](https://redhat.atlassian.net/browse/LOG-10380)
 **Relates to:** [OTEL Collector Migration Spec](2026-08-20-otel-collector-migration-design.md)
 **Prior work:** [LOG-8336 Journal Acks Benchmark](LOG-8336-journal-acks-perf.md) — methodology reference
 

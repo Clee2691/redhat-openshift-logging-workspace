@@ -1,5 +1,8 @@
 # LOG-9876: Drop Historical Logs by Event Timestamp
 
+**Source PR:** [rhobs/redhat-openshift-logging-workspace#17](https://github.com/rhobs/redhat-openshift-logging-workspace/pull/17)
+**Jira:** Story [LOG-9876](https://redhat.atlassian.net/browse/LOG-9876) (Review), under Epic [LOG-9777](https://redhat.atlassian.net/browse/LOG-9777) "Integrate RHOBS-tested changes" (New)
+
 ## Problem
 
 When a ClusterLogForwarder is first deployed (or collectors start with no checkpoints), Vector can read a large existing backlog. Users need to discard records predating a known incident, migration, or collection boundary across all supported log types.
