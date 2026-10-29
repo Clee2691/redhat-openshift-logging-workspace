@@ -1,0 +1,3 @@
+--- Check 10: Admission: url-only CLF still accepted (AC9 backward-compat) ---
+clusterlogforwarder.observability.openshift.io/probe-urlonly created (server dry run)
+RESULT: PASS

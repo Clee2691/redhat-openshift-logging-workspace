@@ -1,0 +1,3 @@
+--- Check 8: Admission: CLF with invalid endpoint URL rejected 'invalid URL' (AC4) ---
+The ClusterLogForwarder "probe-invalid" is invalid: spec.outputs[0].elasticsearch.endpoints[0]: Invalid value: "http://es 1.example.com:9200": invalid URL
+RESULT: PASS

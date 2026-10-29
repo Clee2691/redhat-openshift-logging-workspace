@@ -1,0 +1,38 @@
+# RBAC for LOG-9994 multi-endpoint Elasticsearch verification.
+# - test-collector-sa: the ServiceAccount the ClusterLogForwarders run as. It needs the
+#   collect-application-logs ClusterRole to collect application logs.
+# - test-elasticsearch-sa: the ServiceAccount the ES receiver pods run as. The `nonroot` SCC
+#   is granted to it in verify.sh (SCC grants cannot be expressed as a labeled manifest) and
+#   reverted in teardown.
+# All objects are labeled rhol-verify=LOG-9994 so label-scoped teardown removes them.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: test-collector-sa
+  namespace: openshift-logging
+  labels:
+    rhol-verify: "LOG-9994"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rhol-verify-LOG-9994-collect-application
+  labels:
+    rhol-verify: "LOG-9994"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: collect-application-logs
+subjects:
+- kind: ServiceAccount
+  name: test-collector-sa
+  namespace: openshift-logging
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: test-elasticsearch-sa
+  namespace: openshift-logging
+  labels:
+    rhol-verify: "LOG-9994"

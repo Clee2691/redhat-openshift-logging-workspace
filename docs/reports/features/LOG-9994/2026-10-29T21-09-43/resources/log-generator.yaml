@@ -1,0 +1,43 @@
+# Application log generator. Emits JSON lines carrying a unique per-run marker (__MARKER__),
+# which verify.sh substitutes with verify<FEATURE_ID><NONCE> before applying. The collector
+# classifies pods in this namespace as application logs and forwards them to the ES endpoints;
+# the delivery check queries each ES node for the marker, so only THIS run's logs are counted.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-log-gen
+  labels:
+    rhol-verify: "LOG-9994"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: log-generator
+  namespace: test-log-gen
+  labels:
+    rhol-verify: "LOG-9994"
+    app: log-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: log-generator
+  template:
+    metadata:
+      labels:
+        app: log-generator
+        rhol-verify: "LOG-9994"
+    spec:
+      containers:
+      - name: generator
+        image: registry.redhat.io/ubi9/ubi-minimal:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          i=0
+          while true; do
+            i=$((i+1))
+            echo "{\"message\":\"__MARKER__ log entry $i\",\"level\":\"info\"}"
+            sleep 1
+          done
