@@ -1,0 +1,3 @@
+--- Check 12: Config: endpoints-only -> generated endpoints = [es-1, es-2], no url (AC1/AC2) ---
+generated endpoints: ['http://test-es-1.openshift-logging.svc:9200', 'http://test-es-2.openshift-logging.svc:9200']
+RESULT: PASS

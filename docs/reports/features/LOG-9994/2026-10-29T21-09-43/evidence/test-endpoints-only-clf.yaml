@@ -1,0 +1,68 @@
+apiVersion: observability.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"observability.openshift.io/v1","kind":"ClusterLogForwarder","metadata":{"annotations":{},"labels":{"rhol-verify":"LOG-9994"},"name":"test-endpoints-only","namespace":"openshift-logging"},"spec":{"outputs":[{"elasticsearch":{"endpoints":["http://test-es-1.openshift-logging.svc:9200","http://test-es-2.openshift-logging.svc:9200"],"index":"verify-{.log_type||\"none\"}","version":8},"name":"es-eo","type":"elasticsearch"}],"pipelines":[{"inputRefs":["application"],"name":"app-pipe","outputRefs":["es-eo"]}],"serviceAccount":{"name":"test-collector-sa"}}}
+  creationTimestamp: "2026-10-29T21:11:11Z"
+  generation: 1
+  labels:
+    rhol-verify: LOG-9994
+  name: test-endpoints-only
+  namespace: openshift-logging
+  resourceVersion: "444522"
+  uid: 9fd23041-0b8f-422d-ba08-2eac30092481
+spec:
+  managementState: Managed
+  outputs:
+  - elasticsearch:
+      endpoints:
+      - http://test-es-1.openshift-logging.svc:9200
+      - http://test-es-2.openshift-logging.svc:9200
+      index: verify-{.log_type||"none"}
+      version: 8
+    name: es-eo
+    type: elasticsearch
+  pipelines:
+  - inputRefs:
+    - application
+    name: app-pipe
+    outputRefs:
+    - es-eo
+  serviceAccount:
+    name: test-collector-sa
+status:
+  conditions:
+  - lastTransitionTime: "2026-10-29T21:11:16Z"
+    message: 'permitted to collect log types: [application]'
+    reason: ClusterRolesExist
+    status: "True"
+    type: observability.openshift.io/Authorized
+  - lastTransitionTime: "2026-10-29T21:11:16Z"
+    message: ""
+    reason: ValidationSuccess
+    status: "True"
+    type: observability.openshift.io/Valid
+  - lastTransitionTime: "2026-10-29T21:11:22Z"
+    message: ""
+    reason: ReconciliationComplete
+    status: "True"
+    type: Ready
+  inputConditions:
+  - lastTransitionTime: "2026-10-29T21:11:22Z"
+    message: input "application" is valid
+    reason: ValidationSuccess
+    status: "True"
+    type: observability.openshift.io/ValidInput-application
+  outputConditions:
+  - lastTransitionTime: "2026-10-29T21:11:16Z"
+    message: output "es-eo" is valid
+    reason: ValidationSuccess
+    status: "True"
+    type: observability.openshift.io/ValidOutput-es-eo
+  pipelineConditions:
+  - lastTransitionTime: "2026-10-29T21:11:16Z"
+    message: pipeline "app-pipe" is valid
+    reason: ValidationSuccess
+    status: "True"
+    type: observability.openshift.io/ValidPipeline-app-pipe

@@ -14,28 +14,48 @@ CLO resolves component images at runtime via environment variables on the operat
 
 ### Method 1: Patch OLM-Deployed Operator (Recommended)
 
-Patch the Subscription to inject the env var. OLM propagates it to the operator Deployment, which triggers a pod restart:
+Patch the Subscription to inject the env var. OLM propagates it to the operator Deployment, which triggers a pod restart.
+
+**Capture the original env first** (required for a safe restore on cleanup):
 
 ```bash
+ORIGINAL_ENV=$(oc get subscription cluster-logging -n openshift-logging \
+  -o jsonpath='{.spec.config.env}' 2>/dev/null || echo "null")
+```
+
+**Discover the current pull spec at runtime** (avoids drift from CLO releases):
+
+```bash
+# Discover current pull spec at runtime (avoids drift from CLO releases)
+CURRENT_VECTOR=$(oc get subscription cluster-logging -n openshift-logging \
+  -o jsonpath='{.spec.config.env[?(@.name=="RELATED_IMAGE_VECTOR")].value}' 2>/dev/null || \
+  oc get csv -n openshift-logging -o jsonpath='{.items[0].spec.relatedImages[?(@.name=="vector")].image}' 2>/dev/null)
+```
+
+**Apply the override** — use JSON-patch `add` to append a single var without replacing the whole array (which would drop other `RELATED_IMAGE_*` vars and cluster proxy env vars):
+
+```bash
+# Correct: add a single env var without replacing the whole array
 # Vector collector override
-oc -n openshift-logging patch subscription cluster-logging --type merge -p '{
-  "spec": {"config": {"env": [
-    {"name": "RELATED_IMAGE_VECTOR", "value": "<CUSTOM_IMAGE>"}
-  ]}}}'
+oc -n openshift-logging patch subscription cluster-logging --type json -p '[
+  {"op": "add", "path": "/spec/config/env/-", "value": {"name": "RELATED_IMAGE_VECTOR", "value": "<CUSTOM_IMAGE>"}}
+]'
 
 # LFME override
-oc -n openshift-logging patch subscription cluster-logging --type merge -p '{
-  "spec": {"config": {"env": [
-    {"name": "RELATED_IMAGE_LOG_FILE_METRIC_EXPORTER", "value": "<CUSTOM_IMAGE>"}
-  ]}}}'
+oc -n openshift-logging patch subscription cluster-logging --type json -p '[
+  {"op": "add", "path": "/spec/config/env/-", "value": {"name": "RELATED_IMAGE_LOG_FILE_METRIC_EXPORTER", "value": "<CUSTOM_IMAGE>"}}
+]'
 
-# Both at once
-oc -n openshift-logging patch subscription cluster-logging --type merge -p '{
-  "spec": {"config": {"env": [
-    {"name": "RELATED_IMAGE_VECTOR", "value": "<VECTOR_IMAGE>"},
-    {"name": "RELATED_IMAGE_LOG_FILE_METRIC_EXPORTER", "value": "<LFME_IMAGE>"}
-  ]}}}'
+# Both at once (apply as two sequential adds, or initialize the array first if absent):
+oc -n openshift-logging patch subscription cluster-logging --type json -p '[
+  {"op": "add", "path": "/spec/config/env/-", "value": {"name": "RELATED_IMAGE_VECTOR", "value": "<VECTOR_IMAGE>"}},
+  {"op": "add", "path": "/spec/config/env/-", "value": {"name": "RELATED_IMAGE_LOG_FILE_METRIC_EXPORTER", "value": "<LFME_IMAGE>"}}
+]'
 ```
+
+> **Note:** If `spec.config.env` does not yet exist on the Subscription, initialize it first with a JSON-patch `add` of the full path, then re-run the single-var `add`:
+> `oc -n openshift-logging patch subscription cluster-logging --type json -p '[{"op": "add", "path": "/spec/config/env", "value": []}]'`
+> Then apply the JSON-patch `add` to `/spec/config/env/-` above.
 
 After patching, wait for the operator pod to restart:
 
@@ -46,14 +66,14 @@ oc rollout status deployment/cluster-logging-operator -n openshift-logging --tim
 Then trigger re-reconciliation by touching the CLF (the operator re-deploys collector pods with the new image):
 
 ```bash
-oc annotate clusterlogforwarder logging -n openshift-logging --overwrite \
+oc annotate clusterlogforwarder "${CLF_NAME}" -n openshift-logging --overwrite \
   rhol-verify/image-swap="$(date +%s)"
 ```
 
-Wait for collector pods to roll out with the new image:
+Wait for collector pods to roll out with the new image (DaemonSet name equals `CLF_NAME` — CLO names it after the ClusterLogForwarder):
 
 ```bash
-oc rollout status daemonset/collector -n openshift-logging --timeout=300s
+oc rollout status daemonset/${CLF_NAME} -n openshift-logging --timeout=300s
 ```
 
 ### Method 2: Run Operator Locally
@@ -90,11 +110,15 @@ sed 's|registry.redhat.io/openshift-logging/eventrouter-rhel8:v0.3|<CUSTOM_IMAGE
 
 ## Verify Custom Image Is Running
 
-After swapping, ALWAYS confirm the custom image is actually in use:
+After swapping, ALWAYS confirm the custom image is actually in use.
+
+> **Naming note:** CLO names resources after the ClusterLogForwarder (`internal/factory/resource_names.go`).
+> The collector DaemonSet is `${CLF_NAME}` (not `collector`), and the ConfigMap is `${CLF_NAME}-config`
+> (not `collector-config`). Substitute the actual CLF name for `${CLF_NAME}`.
 
 ```bash
-# Vector collector
-oc get daemonset collector -n openshift-logging \
+# Vector collector — DaemonSet name == CLF_NAME
+oc get daemonset ${CLF_NAME} -n openshift-logging \
   -o jsonpath='{.spec.template.spec.containers[0].image}'
 # Expected: <CUSTOM_IMAGE>
 
@@ -112,8 +136,8 @@ oc get deployment eventrouter -n openshift-logging \
 Record the image SHA for the report:
 
 ```bash
-# Get the actual pulled image digest
-oc get pods -n openshift-logging -l component=collector -o jsonpath='{.items[0].status.containerStatuses[0].imageID}'
+# Get the actual pulled image digest (use app.kubernetes.io/component — CLO uses the k8s common labels)
+oc get pods -n openshift-logging -l app.kubernetes.io/component=collector -o jsonpath='{.items[0].status.containerStatuses[0].imageID}'
 ```
 
 ## Per-Component Verification Patterns
@@ -125,14 +149,15 @@ For Vector changes (parsing, transforms, new sources/sinks), verify beyond just 
 **1. Check collector pod health with the new image:**
 
 ```bash
-oc get pods -n openshift-logging -l component=collector -o wide
-oc logs -n openshift-logging -l component=collector --tail=20
+oc get pods -n openshift-logging -l app.kubernetes.io/component=collector -o wide
+oc logs -n openshift-logging -l app.kubernetes.io/component=collector --tail=20
 ```
 
 **2. Verify generated Vector config reflects the change (if CLO config generation is involved):**
 
 ```bash
-oc get configmap collector-config -n openshift-logging -o jsonpath='{.data.vector\.toml}'
+# ConfigMap name == <clf-name>-config (CLO derives it from the CLF name)
+oc get configmap ${CLF_NAME}-config -n openshift-logging -o jsonpath='{.data.vector\.toml}'
 ```
 
 **3. Verify log structure/parsing (not just delivery count):**
@@ -176,14 +201,14 @@ oc exec -n openshift-logging test-http-receiver -- cat /tmp/app-logs \
 
 ```bash
 oc get daemonset logfilesmetricexporter -n openshift-logging
-oc get pods -n openshift-logging -l component=logfilesmetricexporter
+oc get pods -n openshift-logging -l app.kubernetes.io/component=logfilesmetricexporter
 ```
 
 **2. Verify metrics are exposed:**
 
 ```bash
 # Check LFME pod's metrics endpoint directly
-LFME_POD=$(oc get pods -n openshift-logging -l component=logfilesmetricexporter -o name | head -1)
+LFME_POD=$(oc get pods -n openshift-logging -l app.kubernetes.io/component=logfilesmetricexporter -o name | head -1)
 oc exec -n openshift-logging $LFME_POD -- curl -s http://localhost:2112/metrics | grep log_logged_bytes_total
 ```
 
@@ -198,7 +223,7 @@ oc exec -n openshift-monitoring -c prometheus prometheus-k8s-0 -- \
 **4. Check LFME pod logs for errors:**
 
 ```bash
-oc logs -n openshift-logging -l component=logfilesmetricexporter --tail=20
+oc logs -n openshift-logging -l app.kubernetes.io/component=logfilesmetricexporter --tail=20
 ```
 
 ### Eventrouter Changes
@@ -278,29 +303,187 @@ oc run log-gen-mixed --image=busybox --restart=Never -n test-log-gen \
   done'
 ```
 
+## Multi-Type Log Generation
+
+When a feature affects multiple input types (identified in SKILL.md Step 5c.7), generate and verify logs for each type.
+
+### CLO Existing Manifests (Preferred)
+
+The `cluster-logging-operator/hack/` directory contains production-grade manifests for log generation and test receivers. **Use these instead of ad-hoc busybox pods whenever the CLO repo is available in the workspace.**
+
+| Resource | Path | What It Does |
+|---|---|---|
+| Log generator (base) | `hack/manifests/log-generator/base/` | Kustomize Deployment using `quay.io/openshift-logging/cluster-logging-load-client:latest`. Deploys to `test-workload` namespace. Configurable rate, payload size, and log type. Exposes metrics on port 8081. |
+| Log generator (application overlay) | `hack/manifests/log-generator/overlays/logtype/application/` | Patches base to emit realistic application-type logs (`--log-type=application --log-format=raw`) |
+| Eventrouter | `hack/eventrouter-template.yaml` | OpenShift Template deploying eventrouter (`quay.io/openshift-logging/eventrouter:0.3`). Watches Kubernetes events and writes them as infrastructure logs. |
+| HTTP receiver (per-type routing) | `hack/manifests/receivers/http/` | Vector-based HTTP receiver that routes logs to separate files by type: `/tmp/container/`, `/tmp/journal/`, `/tmp/audit/`. Ideal for per-type delivery verification. |
+| Syslog receiver | `hack/manifests/receivers/syslog/` | rsyslog server that routes by app-name to per-type files: `openshift-app-container.log`, `openshift-infra-container.log`, `openshift-journal.log`, `openshift-audit.log`, `openshift-eventrouter.log` |
+| LokiStack | `hack/manifests/receivers/lokistack/` | LokiStack CR (`1x.demo`, S3 storage, openshift-logging tenant mode) |
+| Log samples | `hack/logsamples/` | Static sample payloads in OTLP, ViaQ, and raw formats for all log types (container, journal, host audit, kube audit, OpenShift audit, OVN audit) |
+
+**Deploy the application log generator:**
+
+```bash
+oc apply -k cluster-logging-operator/hack/manifests/log-generator/overlays/logtype/application/
+```
+
+**Deploy the HTTP receiver (with per-type routing):**
+
+```bash
+oc apply -k cluster-logging-operator/hack/manifests/receivers/http/
+```
+
+**Deploy eventrouter (for Kubernetes event logs):**
+
+```bash
+oc process --local -f cluster-logging-operator/hack/eventrouter-template.yaml \
+  -p SA_NAMESPACE=openshift-logging | oc apply -f -
+```
+
+### Per-Type Generation Summary
+
+| Input Type | How to Generate | How to Verify Delivery |
+|---|---|---|
+| application | CLO log generator (application overlay) OR pod in user namespace | Query receiver for `log_type="application"` or match pod name |
+| infrastructure (container) | Pod in an `openshift-*`, `kube-*`, or `default` namespace | Query receiver for `log_type="infrastructure"` |
+| infrastructure (journal) | Write to node journal via `oc debug node/` + `logger -t rhol-verify` | Query receiver for `log_type="infrastructure"` matching `rhol-verify` identifier |
+| infrastructure (events) | Deploy eventrouter (`hack/eventrouter-template.yaml`) | Query receiver for event-specific fields |
+| audit | Make authenticated API calls (e.g., `oc get configmaps`) | Query receiver for `log_type="audit"` |
+
+### Infrastructure Container Log Generator
+
+Pods in `openshift-*`, `kube-*`, or `default` namespaces produce infrastructure-classified container logs:
+
+```bash
+oc run infra-log-generator --image=busybox --restart=Never -n openshift-logging \
+  --labels="rhol-verify=<FEATURE_ID>" -- \
+  sh -c 'for i in $(seq 1 50); do echo "{\"message\":\"INFRA-VERIFY-$i\",\"level\":\"info\"}"; sleep 1; done'
+```
+
+### Infrastructure Journal Log Generator
+
+Write known test messages to the node's systemd journal via `oc debug node/`:
+
+```bash
+NODE=$(oc get nodes -o jsonpath='{.items[0].metadata.name}')
+oc debug node/$NODE -- chroot /host sh -c \
+  'for i in $(seq 1 20); do logger -t rhol-verify "JOURNAL-VERIFY-$i"; done'
+```
+
+The `rhol-verify` syslog identifier gives a known searchable pattern. Verify delivery by querying the receiver for infrastructure log entries matching this identifier.
+
+### Audit Log Trigger
+
+Audit logs are generated by the API server for authenticated API requests. Trigger a burst:
+
+```bash
+for i in $(seq 1 10); do
+  oc get configmaps -n test-log-gen --ignore-not-found >/dev/null 2>&1
+done
+```
+
+### Per-Type Receiver Queries
+
+**CLO HTTP receiver** (preferred — already routes by type to separate files):
+
+```bash
+# Container (application) logs
+oc exec -n <NAMESPACE> <http-receiver-pod> -- cat /tmp/container/ | head -5
+
+# Journal (infrastructure) logs
+oc exec -n <NAMESPACE> <http-receiver-pod> -- cat /tmp/journal/ | head -5
+
+# Audit logs
+oc exec -n <NAMESPACE> <http-receiver-pod> -- cat /tmp/audit/ | head -5
+
+# Count per type
+oc exec -n <NAMESPACE> <http-receiver-pod> -- wc -l /tmp/container/* /tmp/journal/* /tmp/audit/*
+```
+
+**CLO syslog receiver** (routes by app-name to per-type files):
+
+```bash
+oc exec -n <NAMESPACE> <syslog-pod> -- wc -l /log/openshift-app-container.log /log/openshift-infra-container.log /log/openshift-journal.log /log/openshift-audit.log
+```
+
+**Standalone Loki:**
+
+```bash
+# Application logs
+oc exec -n <NAMESPACE> test-loki-receiver -- \
+  curl -s http://localhost:3100/loki/api/v1/query \
+  --data-urlencode 'query={log_type="application"}' | jq '.data.result | length'
+
+# Infrastructure logs
+oc exec -n <NAMESPACE> test-loki-receiver -- \
+  curl -s http://localhost:3100/loki/api/v1/query \
+  --data-urlencode 'query={log_type="infrastructure"}' | jq '.data.result | length'
+
+# Audit logs
+oc exec -n <NAMESPACE> test-loki-receiver -- \
+  curl -s http://localhost:3100/loki/api/v1/query \
+  --data-urlencode 'query={log_type="audit"}' | jq '.data.result | length'
+```
+
+**LokiStack (gateway):**
+
+```bash
+GATEWAY_POD=$(oc get pods -n openshift-logging -l app.kubernetes.io/component=gateway -o name | head -1)
+
+# Application logs
+oc exec -n openshift-logging $GATEWAY_POD -- \
+  curl -sk https://localhost:8080/api/logs/v1/application/loki/api/v1/query \
+  --data-urlencode 'query={log_type="application"}' -H "X-Scope-OrgID: application" | jq '.data.result | length'
+
+# Infrastructure logs
+oc exec -n openshift-logging $GATEWAY_POD -- \
+  curl -sk https://localhost:8080/api/logs/v1/infrastructure/loki/api/v1/query \
+  --data-urlencode 'query={log_type="infrastructure"}' -H "X-Scope-OrgID: infrastructure" | jq '.data.result | length'
+
+# Audit logs
+oc exec -n openshift-logging $GATEWAY_POD -- \
+  curl -sk https://localhost:8080/api/logs/v1/audit/loki/api/v1/query \
+  --data-urlencode 'query={log_type="audit"}' -H "X-Scope-OrgID: audit" | jq '.data.result | length'
+```
+
+**Elasticsearch:**
+
+```bash
+# Per log_type index (when using index: verify-{.log_type})
+oc exec -n <NAMESPACE> test-elasticsearch -- curl -s http://localhost:9200/verify-application/_count | jq '.count'
+oc exec -n <NAMESPACE> test-elasticsearch -- curl -s http://localhost:9200/verify-infrastructure/_count | jq '.count'
+oc exec -n <NAMESPACE> test-elasticsearch -- curl -s http://localhost:9200/verify-audit/_count | jq '.count'
+```
+
 ## Reverting Image Overrides (Cleanup)
 
 ### Revert Subscription patch
 
-Remove the env override from the Subscription so OLM restores default images:
+Restore the original env captured before patching (not a blanket remove, which drops other `RELATED_IMAGE_*` vars and cluster proxy env vars set by OLM or cluster operators):
 
 ```bash
-oc -n openshift-logging patch subscription cluster-logging --type json -p '[
-  {"op": "remove", "path": "/spec/config/env"}
-]'
+# Restore original env (not a blanket remove, which drops other RELATED_IMAGE_* vars)
+if [[ "$ORIGINAL_ENV" == "null" || "$ORIGINAL_ENV" == "" ]]; then
+  oc -n openshift-logging patch subscription cluster-logging --type json \
+    -p '[{"op": "remove", "path": "/spec/config/env"}]' 2>/dev/null || true
+else
+  oc -n openshift-logging patch subscription cluster-logging --type json \
+    -p "[{\"op\": \"replace\", \"path\": \"/spec/config/env\", \"value\": $ORIGINAL_ENV}]"
+fi
 ```
 
-Wait for the operator and collector to restart with default images:
+Wait for the operator and collector to restart with default images (DaemonSet name == `CLF_NAME`):
 
 ```bash
 oc rollout status deployment/cluster-logging-operator -n openshift-logging --timeout=120s
-oc rollout status daemonset/collector -n openshift-logging --timeout=300s
+oc rollout status daemonset/${CLF_NAME} -n openshift-logging --timeout=300s
 ```
 
 Verify the default image is restored:
 
 ```bash
-oc get daemonset collector -n openshift-logging \
+# DaemonSet name == CLF_NAME (not the fixed string "collector")
+oc get daemonset ${CLF_NAME} -n openshift-logging \
   -o jsonpath='{.spec.template.spec.containers[0].image}'
 ```
 

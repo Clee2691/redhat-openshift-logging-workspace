@@ -4,6 +4,22 @@ Deployment YAML for each test receiver type. Images and configurations are deriv
 
 All resources MUST include the `rhol-verify: <FEATURE_ID>` label. Replace `<FEATURE_ID>` and `<NAMESPACE>` (usually `openshift-logging`).
 
+## RBAC — use labeled manifests, not `oc adm policy`
+
+`oc adm policy add-cluster-role-to-user` creates **unlabeled** ClusterRoleBindings, which the label-based cleanup cannot delete — this leaks cluster RBAC on every run. Always create RBAC using labeled manifests applied with `oc apply`:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rhol-verify-<FEATURE_ID>-log-collector
+  labels:
+    rhol-verify: "<FEATURE_ID>"
+# ... rest of CRB
+```
+
+The `resources/rbac/sa-and-bindings.yaml` already uses this pattern — make that the single path for RBAC. Label-based teardown (`oc delete clusterrolebinding -l rhol-verify=<FEATURE_ID>`) then cleans up without any hardcoded names.
+
 ## Receiver Selection
 
 | CLF Output Type | Receiver | Section |
@@ -27,6 +43,17 @@ All resources MUST include the `rhol-verify: <FEATURE_ID>` label. Replace `<FEAT
 **Source:** `cluster-logging-operator/test/framework/functional/output_elasticsearch.go`
 **Also available:** 6.8.23, 7.17.28, 9.3.3
 
+**SCC grant (required on OpenShift — `runAsUser: 2000` is rejected by `restricted-v2` without it):**
+
+```bash
+# Grant SCC to a dedicated SA (NOT the default SA — that's a lasting privilege change)
+oc create serviceaccount test-elasticsearch-sa -n <NAMESPACE> --dry-run=client -o yaml | oc apply -f -
+oc label serviceaccount test-elasticsearch-sa -n <NAMESPACE> rhol-verify=<FEATURE_ID>
+oc adm policy add-scc-to-user nonroot -z test-elasticsearch-sa -n <NAMESPACE>
+# Revert on cleanup (label-based teardown handles the SA, but SCC grant needs explicit revert):
+# oc adm policy remove-scc-from-user nonroot -z test-elasticsearch-sa -n <NAMESPACE>
+```
+
 ```yaml
 apiVersion: v1
 kind: Pod
@@ -37,6 +64,7 @@ metadata:
     rhol-verify: "<FEATURE_ID>"
     app: test-elasticsearch
 spec:
+  serviceAccountName: test-elasticsearch-sa
   securityContext:
     runAsUser: 2000
   containers:
@@ -81,8 +109,12 @@ spec:
   type: elasticsearch
   elasticsearch:
     url: http://test-elasticsearch.<NAMESPACE>.svc:9200
-    index: verify-{.log_type}
+    index: verify-{.log_type||"none"}
 ```
+
+> **CRD requirement:** a dynamic `index` value containing a `{.field}` reference must supply a
+> literal fallback (`||"..."`), or admission rejects the CLF. `verify-{.log_type}` is invalid;
+> `verify-{.log_type||"none"}` is accepted.
 
 **Verify delivery:**
 ```bash
@@ -696,10 +728,18 @@ oc exec -n <NAMESPACE> test-splunk -- \
 
 **Note:** Splunk takes 60-90 seconds to start. Wait for readiness before sending logs.
 
-**SCC:** Splunk runs as UID 41812. On OpenShift, you may need to grant the `nonroot` SCC to the service account:
+**SCC:** Splunk runs as UID 41812. On OpenShift, grant the `nonroot` SCC to a **dedicated** service account (not the `default` SA — granting to `default` is a lasting privilege change for the whole namespace):
+
 ```bash
-oc adm policy add-scc-to-user nonroot -z default -n <NAMESPACE>
+# Grant SCC to a dedicated SA (not the default SA)
+oc create serviceaccount test-splunk-sa -n <NAMESPACE> --dry-run=client -o yaml | oc apply -f -
+oc label serviceaccount test-splunk-sa -n <NAMESPACE> rhol-verify=<FEATURE_ID>
+oc adm policy add-scc-to-user nonroot -z test-splunk-sa -n <NAMESPACE>
+# Revert on cleanup (label-based teardown handles the SA, but SCC grant needs explicit revert):
+# oc adm policy remove-scc-from-user nonroot -z test-splunk-sa -n <NAMESPACE>
 ```
+
+Add `serviceAccountName: test-splunk-sa` to the Pod spec above.
 
 ---
 
@@ -1013,6 +1053,17 @@ If the full LokiStack deployment is too heavy for the verification task, deploy 
 **Image:** `grafana/loki:3.3.2`
 **Source:** `cluster-logging-operator/test/helpers/loki/receiver.go`
 
+**SCC grant (required on OpenShift — `runAsUser: 10001` is rejected by `restricted-v2` without it):**
+
+```bash
+# Grant SCC to a dedicated SA (NOT the default SA — that's a lasting privilege change)
+oc create serviceaccount test-loki-sa -n <NAMESPACE> --dry-run=client -o yaml | oc apply -f -
+oc label serviceaccount test-loki-sa -n <NAMESPACE> rhol-verify=<FEATURE_ID>
+oc adm policy add-scc-to-user nonroot -z test-loki-sa -n <NAMESPACE>
+# Revert on cleanup (label-based teardown handles the SA, but SCC grant needs explicit revert):
+# oc adm policy remove-scc-from-user nonroot -z test-loki-sa -n <NAMESPACE>
+```
+
 ```yaml
 apiVersion: v1
 kind: Pod
@@ -1023,6 +1074,7 @@ metadata:
     rhol-verify: "<FEATURE_ID>"
     app: test-loki-receiver
 spec:
+  serviceAccountName: test-loki-sa
   securityContext:
     runAsUser: 10001
   containers:

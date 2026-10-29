@@ -1,0 +1,3 @@
+--- Check 3: CRD: elasticsearch CEL rule 'URL or endpoints required' (AC3) ---
+CEL: [{"message": "URL or endpoints required", "rule": "has(self.url) || (has(self.endpoints) && self.endpoints.size() > 0)"}]
+RESULT: PASS
