@@ -1,0 +1,23 @@
+# AC3 negative: elasticsearch output with neither url nor endpoints.
+# Expected: apiserver rejects via CEL rule, message "URL or endpoints required".
+# Used only with `oc apply --dry-run=server` (never persisted).
+apiVersion: observability.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  name: adm-neither
+  namespace: openshift-logging
+  labels:
+    rhol-verify: "LOG-9994"
+spec:
+  serviceAccount:
+    name: test-collector-sa
+  outputs:
+  - name: es-bad
+    type: elasticsearch
+    elasticsearch:
+      version: 8
+      index: verify-{.log_type||"none"}
+  pipelines:
+  - name: forward
+    inputRefs: [application]
+    outputRefs: [es-bad]

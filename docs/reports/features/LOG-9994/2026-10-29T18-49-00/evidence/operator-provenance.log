@@ -1,0 +1,8 @@
+=== Operator provenance (captured post-run) ===
+date: 2026-10-29T23:05:10Z
+--- CSV ---
+cluster-logging.v6.7.0  version=6.7.0
+--- operator pod imageID (digest) ---
+cluster-logging-operator-687c898ccc-sp5hn  imageID=image-registry.openshift-image-registry.svc:5000/openshift/origin-cluster-logging-operator@sha256:dd62b4d1eb968c6bcf8e27a15312d8f9eb99c53d2acd1fbe6a5eeddf3605898f
+--- operator pod image (tag) ---
+image-registry.openshift-image-registry.svc:5000/openshift/origin-cluster-logging-operator:LOG-9994

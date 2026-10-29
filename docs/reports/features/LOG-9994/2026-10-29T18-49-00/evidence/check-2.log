@@ -1,0 +1,3 @@
+--- Check 2: AC2: CRD elasticsearch 'required' does not include 'url' (url optional) ---
+required= ['index', 'version']
+RESULT: PASS

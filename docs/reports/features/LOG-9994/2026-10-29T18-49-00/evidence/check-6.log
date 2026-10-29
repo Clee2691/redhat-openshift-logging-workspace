@@ -1,0 +1,3 @@
+--- Check 6: AC7: mixed http/https endpoints are ACCEPTED by admission ---
+mixed-scheme accepted
+RESULT: PASS

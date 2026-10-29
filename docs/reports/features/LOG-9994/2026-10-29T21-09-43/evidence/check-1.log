@@ -1,3 +1,0 @@
---- Check 1: CRD: elasticsearch output has 'endpoints' field (AC1) ---
-endpoints present: True
-RESULT: PASS

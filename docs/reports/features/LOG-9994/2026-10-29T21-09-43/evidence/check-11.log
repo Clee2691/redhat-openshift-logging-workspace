@@ -1,4 +1,0 @@
---- Check 11: Config: url+endpoints -> generated endpoints = [url, endpoint] with url prepended (AC5) ---
-generated endpoints: ['http://test-es-1.openshift-logging.svc:9200', 'http://test-es-2.openshift-logging.svc:9200']
-url(test-es-1) prepended before endpoint(test-es-2): True
-RESULT: PASS

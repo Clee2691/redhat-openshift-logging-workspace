@@ -1,0 +1,3 @@
+--- Check 8: AC5: generated config for 'test-url-and-endpoints' has endpoints=[test-es-1, test-es-2] (url first) ---
+    endpoints = ["http://test-es-1.openshift-logging.svc:9200", "http://test-es-2.openshift-logging.svc:9200"]
+RESULT: PASS
