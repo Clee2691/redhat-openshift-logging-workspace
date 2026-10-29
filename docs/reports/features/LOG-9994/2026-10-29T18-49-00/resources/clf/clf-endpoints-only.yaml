@@ -1,0 +1,28 @@
+# CLF exercising endpoints-only configuration (no url). The generated Vector
+# config endpoints array must be [test-es-1, test-es-2]. Exercises AC3 (endpoints
+# alone satisfies the CEL rule) end-to-end and delivers logs via load balancing.
+apiVersion: observability.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  name: test-endpoints-only
+  namespace: openshift-logging
+  labels:
+    rhol-verify: "LOG-9994"
+spec:
+  serviceAccount:
+    name: test-collector-sa
+  outputs:
+  - name: es-multi
+    type: elasticsearch
+    elasticsearch:
+      endpoints:
+      - http://test-es-1.openshift-logging.svc:9200
+      - http://test-es-2.openshift-logging.svc:9200
+      version: 8
+      index: verify-{.log_type||"none"}
+  pipelines:
+  - name: app-to-es
+    inputRefs:
+    - application
+    outputRefs:
+    - es-multi

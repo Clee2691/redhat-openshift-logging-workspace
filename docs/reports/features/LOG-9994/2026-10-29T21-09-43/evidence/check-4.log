@@ -1,3 +1,0 @@
---- Check 4: CRD: endpoints items carry isURL(self) validation (AC4) ---
-endpoints item CEL: [{"message": "invalid URL", "rule": "isURL(self)"}]
-RESULT: PASS

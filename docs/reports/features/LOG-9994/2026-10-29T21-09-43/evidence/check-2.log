@@ -1,3 +1,0 @@
---- Check 2: CRD: elasticsearch no longer requires 'url' (required == [index, version]) (AC2) ---
-required: ['index', 'version']
-RESULT: PASS

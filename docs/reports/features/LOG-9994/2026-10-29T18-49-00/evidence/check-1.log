@@ -1,0 +1,3 @@
+--- Check 1: AC1: CRD elasticsearch output has 'endpoints' array property with per-item isURL CEL ---
+endpoints present; item rule=isURL(self)
+RESULT: PASS

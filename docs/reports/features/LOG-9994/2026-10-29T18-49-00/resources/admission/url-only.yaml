@@ -1,0 +1,24 @@
+# AC9 backward-compat: an existing url-only elasticsearch manifest (no endpoints).
+# Expected: apiserver ACCEPTS unchanged against the new schema.
+# Used only with `oc apply --dry-run=server`.
+apiVersion: observability.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  name: adm-url-only
+  namespace: openshift-logging
+  labels:
+    rhol-verify: "LOG-9994"
+spec:
+  serviceAccount:
+    name: test-collector-sa
+  outputs:
+  - name: es-url
+    type: elasticsearch
+    elasticsearch:
+      url: http://test-es-1.openshift-logging.svc:9200
+      version: 8
+      index: verify-{.log_type||"none"}
+  pipelines:
+  - name: forward
+    inputRefs: [application]
+    outputRefs: [es-url]

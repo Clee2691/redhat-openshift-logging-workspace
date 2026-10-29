@@ -1,0 +1,25 @@
+# AC4 negative: an endpoints entry that is not a valid URL.
+# Expected: apiserver rejects via per-item CEL rule isURL(self), message "invalid URL".
+# Used only with `oc apply --dry-run=server`.
+apiVersion: observability.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  name: adm-invalid-endpoint
+  namespace: openshift-logging
+  labels:
+    rhol-verify: "LOG-9994"
+spec:
+  serviceAccount:
+    name: test-collector-sa
+  outputs:
+  - name: es-bad
+    type: elasticsearch
+    elasticsearch:
+      endpoints:
+      - "not a valid url"
+      version: 8
+      index: verify-{.log_type||"none"}
+  pipelines:
+  - name: forward
+    inputRefs: [application]
+    outputRefs: [es-bad]

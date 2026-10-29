@@ -1,0 +1,34 @@
+# Collector ServiceAccount + RBAC for the ClusterLogForwarders, and a dedicated
+# ServiceAccount for the Elasticsearch test receivers. All labeled for cleanup.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: test-collector-sa
+  namespace: openshift-logging
+  labels:
+    rhol-verify: "LOG-9994"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rhol-verify-LOG-9994-collect-application
+  labels:
+    rhol-verify: "LOG-9994"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: collect-application-logs
+subjects:
+- kind: ServiceAccount
+  name: test-collector-sa
+  namespace: openshift-logging
+---
+# Dedicated SA for the Elasticsearch receiver pods (ES image runs as UID 2000,
+# rejected by restricted-v2 without the nonroot SCC granted in verify.sh).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: test-es-sa
+  namespace: openshift-logging
+  labels:
+    rhol-verify: "LOG-9994"

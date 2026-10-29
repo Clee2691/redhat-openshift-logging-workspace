@@ -1,0 +1,3 @@
+--- Check 3: AC3-neg: CLF with neither url nor endpoints is REJECTED ('URL or endpoints required') ---
+The ClusterLogForwarder "adm-neither" is invalid: spec.outputs[0].elasticsearch: Invalid value: URL or endpoints required
+RESULT: PASS

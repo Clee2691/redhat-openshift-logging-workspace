@@ -1,3 +1,0 @@
---- Check 5: Admission: endpoints-only CLF accepted (AC1/AC2/AC3) ---
-clusterlogforwarder.observability.openshift.io/probe-eo created (server dry run)
-RESULT: PASS

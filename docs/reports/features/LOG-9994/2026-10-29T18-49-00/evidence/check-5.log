@@ -1,0 +1,3 @@
+--- Check 5: AC4: endpoints entry that is not a URL is REJECTED ('invalid URL') ---
+The ClusterLogForwarder "adm-invalid-endpoint" is invalid: spec.outputs[0].elasticsearch.endpoints[0]: Invalid value: "not a valid url": invalid URL
+RESULT: PASS

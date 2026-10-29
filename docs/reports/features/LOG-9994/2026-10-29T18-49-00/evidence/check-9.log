@@ -1,0 +1,3 @@
+--- Check 9: AC5b: generated config for 'test-endpoints-only' endpoints list contains test-es-1 AND test-es-2 ---
+    endpoints = ["http://test-es-1.openshift-logging.svc:9200", "http://test-es-2.openshift-logging.svc:9200"]
+RESULT: PASS

@@ -1,4 +1,0 @@
---- Check 13: E2E: application logs with run marker delivered to Elasticsearch endpoint(s) ---
-marker=verifyLOG9994916a6032  test-es-1=0  test-es-2=0  total=0
-marker=verifyLOG9994916a6032  test-es-1=8  test-es-2=15  total=23
-RESULT: PASS

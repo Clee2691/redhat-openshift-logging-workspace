@@ -1,0 +1,2 @@
+NAME                                        READY   STATUS    RESTARTS   AGE    IP            NODE                                         NOMINATED NODE   READINESS GATES
+cluster-logging-operator-687c898ccc-sp5hn   1/1     Running   0          4h7m   10.129.2.41   calee-1028cluster1317-j5q8p-worker-b-sp8pp   <none>           <none>

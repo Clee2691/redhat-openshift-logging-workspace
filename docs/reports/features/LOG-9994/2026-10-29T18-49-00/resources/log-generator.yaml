@@ -1,0 +1,36 @@
+# Application log generator. Emits a unique per-run marker to stdout so the
+# delivery check can attribute documents at the Elasticsearch receivers to THIS run.
+# NOTE: verify.sh renders this template at runtime, substituting ${MARKER} with the
+# per-run nonce (verify-LOG-9994-<nonce>) and creating namespace ${TEST_NS}.
+# This file is the committed template; the literal ${MARKER} is replaced at apply time.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: log-generator
+  namespace: ${TEST_NS}
+  labels:
+    rhol-verify: "LOG-9994"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: log-generator
+  template:
+    metadata:
+      labels:
+        app: log-generator
+        rhol-verify: "LOG-9994"
+    spec:
+      containers:
+      - name: gen
+        image: registry.redhat.io/ubi9/ubi-minimal:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          i=0
+          while true; do
+            i=$((i+1));
+            echo "${MARKER} seq=$i multi-endpoint elasticsearch verification log line";
+            sleep 1;
+          done

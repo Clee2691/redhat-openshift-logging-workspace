@@ -1,0 +1,72 @@
+=== Run marker: verify-LOG-9994-5a0b57d9 ===
+serviceaccount/test-collector-sa created
+clusterrolebinding.rbac.authorization.k8s.io/rhol-verify-LOG-9994-collect-application created
+serviceaccount/test-es-sa created
+clusterrole.rbac.authorization.k8s.io/system:openshift:scc:nonroot added: "test-es-sa"
+pod/test-es-1 created
+service/test-es-1 created
+pod/test-es-2 created
+service/test-es-2 created
+Waiting for Elasticsearch receivers to be Ready...
+pod/test-es-1 condition met
+pod/test-es-2 condition met
+namespace/test-log-gen created
+deployment.apps/log-generator created
+Waiting for deployment "log-generator" rollout to finish: 0 of 1 updated replicas are available...
+deployment "log-generator" successfully rolled out
+clusterlogforwarder.observability.openshift.io/test-url-and-endpoints created
+clusterlogforwarder.observability.openshift.io/test-endpoints-only created
+Waiting for daemon set "test-url-and-endpoints" rollout to finish: 1 of 6 updated pods are available...
+Waiting for daemon set "test-url-and-endpoints" rollout to finish: 2 of 6 updated pods are available...
+Waiting for daemon set "test-url-and-endpoints" rollout to finish: 3 of 6 updated pods are available...
+Waiting for daemon set "test-url-and-endpoints" rollout to finish: 4 of 6 updated pods are available...
+Waiting for daemon set "test-url-and-endpoints" rollout to finish: 5 of 6 updated pods are available...
+daemon set "test-url-and-endpoints" successfully rolled out
+daemon set "test-endpoints-only" successfully rolled out
+--- Check 1: AC1: CRD elasticsearch output has 'endpoints' array property with per-item isURL CEL ---
+endpoints present; item rule=isURL(self)
+RESULT: PASS
+--- Check 2: AC2: CRD elasticsearch 'required' does not include 'url' (url optional) ---
+required= ['index', 'version']
+RESULT: PASS
+--- Check 3: AC3-neg: CLF with neither url nor endpoints is REJECTED ('URL or endpoints required') ---
+The ClusterLogForwarder "adm-neither" is invalid: spec.outputs[0].elasticsearch: Invalid value: URL or endpoints required
+RESULT: PASS
+--- Check 4: AC3-pos: CLF with endpoints-only is ACCEPTED by admission ---
+endpoints-only accepted
+RESULT: PASS
+--- Check 5: AC4: endpoints entry that is not a URL is REJECTED ('invalid URL') ---
+The ClusterLogForwarder "adm-invalid-endpoint" is invalid: spec.outputs[0].elasticsearch.endpoints[0]: Invalid value: "not a valid url": invalid URL
+RESULT: PASS
+--- Check 6: AC7: mixed http/https endpoints are ACCEPTED by admission ---
+mixed-scheme accepted
+RESULT: PASS
+--- Check 7: AC9: existing url-only manifest is ACCEPTED unchanged ---
+url-only accepted
+RESULT: PASS
+--- Check 8: AC5: generated config for 'test-url-and-endpoints' has endpoints=[test-es-1, test-es-2] (url first) ---
+    endpoints = ["http://test-es-1.openshift-logging.svc:9200", "http://test-es-2.openshift-logging.svc:9200"]
+RESULT: PASS
+--- Check 9: AC5b: generated config for 'test-endpoints-only' endpoints list contains test-es-1 AND test-es-2 ---
+    endpoints = ["http://test-es-1.openshift-logging.svc:9200", "http://test-es-2.openshift-logging.svc:9200"]
+RESULT: PASS
+Allowing ~60s for logs to flow to the Elasticsearch endpoints...
+--- Check 10: E2E: marker 'verify-LOG-9994-5a0b57d9' delivered to the multi-endpoint ES cluster (es-1 + es-2 >= 1) ---
+test-es-1 count=55 test-es-2 count=99 total=154
+RESULT: PASS
+
+==============================
+SUMMARY 10/10 checks passed  (marker verify-LOG-9994-5a0b57d9)
+==============================
+=== Teardown ===
+clusterlogforwarder.observability.openshift.io "test-endpoints-only" deleted from openshift-logging namespace
+clusterlogforwarder.observability.openshift.io "test-url-and-endpoints" deleted from openshift-logging namespace
+pod "test-es-1" deleted from openshift-logging namespace
+pod "test-es-2" deleted from openshift-logging namespace
+service "test-es-1" deleted from openshift-logging namespace
+service "test-es-2" deleted from openshift-logging namespace
+serviceaccount "test-collector-sa" deleted from openshift-logging namespace
+serviceaccount "test-es-sa" deleted from openshift-logging namespace
+clusterrolebinding.rbac.authorization.k8s.io "rhol-verify-LOG-9994-collect-application" deleted
+clusterrole.rbac.authorization.k8s.io/system:openshift:scc:nonroot removed: "test-es-sa"
+namespace "test-log-gen" deleted

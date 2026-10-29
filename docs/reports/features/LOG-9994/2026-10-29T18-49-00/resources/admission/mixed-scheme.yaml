@@ -1,0 +1,27 @@
+# AC7 positive: mixed http/https endpoints across the endpoints list (plus an https url).
+# Expected: apiserver ACCEPTS (schema/CEL allow mixed schemes; Vector handles per-URI TLS).
+# Used only with `oc apply --dry-run=server`.
+apiVersion: observability.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  name: adm-mixed-scheme
+  namespace: openshift-logging
+  labels:
+    rhol-verify: "LOG-9994"
+spec:
+  serviceAccount:
+    name: test-collector-sa
+  outputs:
+  - name: es-mixed
+    type: elasticsearch
+    elasticsearch:
+      url: https://es-primary.example.com:9200
+      endpoints:
+      - http://es1.example.com:9200
+      - https://es2.example.com:9200
+      version: 8
+      index: verify-{.log_type||"none"}
+  pipelines:
+  - name: forward
+    inputRefs: [application]
+    outputRefs: [es-mixed]

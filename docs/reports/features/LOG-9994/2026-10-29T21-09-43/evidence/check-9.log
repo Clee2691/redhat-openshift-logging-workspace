@@ -1,3 +1,0 @@
---- Check 9: Admission: CLF with mixed http/https endpoints accepted (AC7) ---
-clusterlogforwarder.observability.openshift.io/probe-mixed created (server dry run)
-RESULT: PASS

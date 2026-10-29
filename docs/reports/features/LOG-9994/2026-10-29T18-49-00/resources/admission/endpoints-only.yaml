@@ -1,0 +1,26 @@
+# AC3 positive: elasticsearch output with endpoints only (no url).
+# Expected: apiserver ACCEPTS (endpoints alone satisfies the url-or-endpoints CEL rule).
+# Used only with `oc apply --dry-run=server`.
+apiVersion: observability.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  name: adm-endpoints-only
+  namespace: openshift-logging
+  labels:
+    rhol-verify: "LOG-9994"
+spec:
+  serviceAccount:
+    name: test-collector-sa
+  outputs:
+  - name: es-ep
+    type: elasticsearch
+    elasticsearch:
+      endpoints:
+      - http://test-es-1.openshift-logging.svc:9200
+      - http://test-es-2.openshift-logging.svc:9200
+      version: 8
+      index: verify-{.log_type||"none"}
+  pipelines:
+  - name: forward
+    inputRefs: [application]
+    outputRefs: [es-ep]
