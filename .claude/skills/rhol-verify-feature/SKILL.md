@@ -17,7 +17,7 @@ defensible report.
 
 Cross-repo: accepts pre-built Vector/LFME/eventrouter images and swaps them in before testing. Always
 verifies log delivery (on-cluster test receiver, or existing LokiStack). Produces `verify.sh`,
-`resources/`, `evidence/`, and a BDD `verify.feature` for reproducibility.
+`resources/`, local `evidence/` (gitignored), and a BDD `verify.feature`.
 
 ## Companion files
 
@@ -215,7 +215,7 @@ See companion files; do not re-derive:
 - **Pre-flight (5.5):** `orchestration.md §Pre-flight validation` — `bash -n`, dry-run every manifest, isolated check runs, before cluster time
 - **Execute (6):** `orchestration.md §The delegate pipeline`; receivers → `receivers.md`; log generators + per-component patterns → `cross-repo.md`
 - **Reproduction script (7):** `orchestration.md §The delegate pipeline` (Planner output)
-- **Cleanup + report (8):** `reporting.md §Report template`. Save `report.md`, `verify.feature`, `verify.sh`, `resources/`, `evidence/` under `docs/reports/features/<LOG-XXXX>/<YYYY-MM-DDThh-mm-ss>/`
+- **Cleanup + report (8):** `reporting.md §Report template`. Save `report.md`, `verify.feature`, `verify.sh`, `resources/`, `evidence/` under `docs/reports/features/<LOG-XXXX>/<YYYY-MM-DDThh-mm-ss>/` — commit all but `evidence/` (local, gitignored, regenerable)
 
 ---
 

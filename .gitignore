@@ -11,3 +11,5 @@ vector/
 
 worktrees/
 .claude/settings.local.json
+# Verification-run raw evidence — regenerable via verify.sh, not committed (PR #19 review)
+docs/reports/features/**/evidence/

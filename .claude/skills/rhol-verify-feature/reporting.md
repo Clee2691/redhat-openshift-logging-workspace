@@ -13,7 +13,7 @@ the exact contract the Reviewer enforces against the raw evidence.
 
 | Level | Meaning | Evidence recorded | Counts toward "met"? |
 |-------|---------|-------------------|----------------------|
-| **on-cluster** | Observable behavior confirmed on the live cluster | Exact command(s) + raw output persisted to `evidence/` | Yes |
+| **on-cluster** | Observable behavior confirmed on the live cluster | Exact command(s) + raw output persisted to local `evidence/` (gitignored — quote key excerpts in `report.md`) | Yes |
 | **by-test** | Behavioral contract covered by an existing unit or functional test | The test's name/path + its pass result | Yes |
 | **gap** | A behavioral contract verifiable by neither an on-cluster check nor any existing test | Explanation + note that a test is missing | No — flagged |
 
@@ -23,7 +23,7 @@ functional-test `.toml` fixtures, not unit tests; both count.
 **`by-test` requires the test to exist and pass — not plausibility.** A valid `by-test` citation
 names the test file + function AND shows it is real and green: confirm the function exists in the
 PR's changed files (e.g. `gh pr diff <n> | grep 'func TestX'`) and cite the CI job that ran it
-(`e2e-using-bundle` / `functional-target`) with its pass result. "This is plausible given the PR's
+(an `e2e*` presubmit or `functional-target` — whatever `gh pr checks` shows green) with its pass result. "This is plausible given the PR's
 intent" is NOT by-test evidence — a criterion with only a plausibility argument and no confirmed
 test is a `gap`.
 
@@ -263,7 +263,7 @@ marker used. An unexplained large asymmetry between endpoints is a signal to inv
 | `verify.sh` | Idempotent reproduction script |
 | `verify.feature` | BDD Gherkin description of on-cluster checks |
 | `resources/<name>.yaml` | Kubernetes resource files |
-| `evidence/*.log` | Raw command output the Reviewer and report cite |
+| `evidence/*.log` | Raw command output the Reviewer and report cite (local only, gitignored — quote key excerpts in the report) |
 
 **Usage:**
 ```bash

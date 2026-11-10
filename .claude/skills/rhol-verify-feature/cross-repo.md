@@ -16,12 +16,10 @@ CLO resolves component images at runtime via environment variables on the operat
 
 Patch the Subscription to inject the env var. OLM propagates it to the operator Deployment, which triggers a pod restart.
 
-**Capture the original env first** (required for a safe restore on cleanup):
-
-```bash
-ORIGINAL_ENV=$(oc get subscription cluster-logging -n openshift-logging \
-  -o jsonpath='{.spec.config.env}' 2>/dev/null || echo "null")
-```
+No pre-capture is needed: cleanup removes only the entries this run injects (see
+[Reverting Image Overrides](#reverting-image-overrides-cleanup)). Removing the `env` path outright
+is also safe when nothing pre-existing was there — OLM then reverts the operator Deployment to the
+images referenced in the CSV.
 
 **Discover the current pull spec at runtime** (avoids drift from CLO releases):
 
@@ -88,7 +86,15 @@ IMAGE_LOGFILEMETRICEXPORTER=<CUSTOM_IMAGE> make run
 IMAGE_LOGGING_VECTOR=<VECTOR_IMAGE> IMAGE_LOGFILEMETRICEXPORTER=<LFME_IMAGE> make run
 ```
 
-This runs the operator locally against the cluster's kubeconfig. The operator applies CRDs and reconciles using the custom images.
+`KUBECONFIG` **must be exported first**: the Makefile passes `KUBERNETES_CONFIG=$(KUBECONFIG)` to
+`go run cmd/main.go` and defaults `KUBECONFIG` to `~/.kube/config` — an unset `KUBECONFIG` silently
+runs the operator against whatever cluster that file holds, which may not be the one under test:
+
+```bash
+export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/config}"   # or point at the cluster under test
+```
+
+The operator applies CRDs and reconciles using the custom images.
 
 ### Method 3: Eventrouter (Template-Based)
 
@@ -153,7 +159,12 @@ oc get pods -n openshift-logging -l app.kubernetes.io/component=collector -o wid
 oc logs -n openshift-logging -l app.kubernetes.io/component=collector --tail=20
 ```
 
-**2. Verify generated Vector config reflects the change (if CLO config generation is involved):**
+**2. Inspect the generated Vector config (only when the AC names it, or to diagnose a failed delivery):**
+
+Outcome checks are primary — confirm the observable behavior at the receiver first. Assert on the
+generated config only when the acceptance criterion explicitly references it (e.g. CRD/admission
+features where the generated config *is* the behavior); otherwise treat this as a diagnostic step
+when delivery fails.
 
 ```bash
 # ConfigMap name == <clf-name>-config (CLO derives it from the CLF name)
@@ -318,7 +329,7 @@ The `cluster-logging-operator/hack/` directory contains production-grade manifes
 | Eventrouter | `hack/eventrouter-template.yaml` | OpenShift Template deploying eventrouter (`quay.io/openshift-logging/eventrouter:0.3`). Watches Kubernetes events and writes them as infrastructure logs. |
 | HTTP receiver (per-type routing) | `hack/manifests/receivers/http/` | Vector-based HTTP receiver that routes logs to separate files by type: `/tmp/container/`, `/tmp/journal/`, `/tmp/audit/`. Ideal for per-type delivery verification. |
 | Syslog receiver | `hack/manifests/receivers/syslog/` | rsyslog server that routes by app-name to per-type files: `openshift-app-container.log`, `openshift-infra-container.log`, `openshift-journal.log`, `openshift-audit.log`, `openshift-eventrouter.log` |
-| LokiStack | `hack/manifests/receivers/lokistack/` | LokiStack CR (`1x.demo`, S3 storage, openshift-logging tenant mode) |
+| LokiStack | `hack/manifests/receivers/lokistack/` | LokiStack CR (`1x.demo`, S3 storage, openshift-logging tenant mode) — requires garage + loki operator first (see below) |
 | Log samples | `hack/logsamples/` | Static sample payloads in OTLP, ViaQ, and raw formats for all log types (container, journal, host audit, kube audit, OpenShift audit, OVN audit) |
 
 **Deploy the application log generator:**
@@ -338,6 +349,19 @@ oc apply -k cluster-logging-operator/hack/manifests/receivers/http/
 ```bash
 oc process --local -f cluster-logging-operator/hack/eventrouter-template.yaml \
   -p SA_NAMESPACE=openshift-logging | oc apply -f -
+```
+
+**Deploy LokiStack (storage + loki operator are prerequisites):**
+
+The `receivers/lokistack` manifest is only the LokiStack CR — it stays Pending until S3 storage
+and the loki operator are running. Deploy both from the existing observability-operators
+manifests first:
+
+```bash
+oc apply -k cluster-logging-operator/hack/manifests/observability-operators/garage       # S3 storage
+oc apply -k cluster-logging-operator/hack/manifests/observability-operators/loki-operator # loki operator
+# wait for the loki-operator pod in openshift-operators-redhat to be Ready, then:
+oc apply -k cluster-logging-operator/hack/manifests/receivers/lokistack
 ```
 
 ### Per-Type Generation Summary
@@ -459,16 +483,26 @@ oc exec -n <NAMESPACE> test-elasticsearch -- curl -s http://localhost:9200/verif
 
 ### Revert Subscription patch
 
-Restore the original env captured before patching (not a blanket remove, which drops other `RELATED_IMAGE_*` vars and cluster proxy env vars set by OLM or cluster operators):
+Remove only the env entries this run injected. A blanket remove of `/spec/config/env` would drop
+pre-existing vars (cluster proxy config, other `RELATED_IMAGE_*` overrides); if nothing
+pre-existing remains, removing the path entirely is correct — OLM reverts the operator Deployment
+to the images referenced in the CSV:
 
 ```bash
-# Restore original env (not a blanket remove, which drops other RELATED_IMAGE_* vars)
-if [[ "$ORIGINAL_ENV" == "null" || "$ORIGINAL_ENV" == "" ]]; then
+# Drop only the vars this run injected; keep anything pre-existing
+command -v jq >/dev/null || { echo "jq is required for safe env cleanup — aborting (a blanket remove could drop pre-existing vars)" >&2; exit 1; }
+CLEAN_ENV=$(oc get subscription cluster-logging -n openshift-logging \
+  -o jsonpath='{.spec.config.env}' 2>/dev/null \
+  | jq -c 'map(select(.name != "RELATED_IMAGE_VECTOR"
+                    and .name != "RELATED_IMAGE_LOG_FILE_METRIC_EXPORTER"))' 2>/dev/null)
+
+if [[ -z "$CLEAN_ENV" || "$CLEAN_ENV" == "[]" ]]; then
+  # nothing pre-existing remains — remove the path so OLM reverts to the CSV images
   oc -n openshift-logging patch subscription cluster-logging --type json \
     -p '[{"op": "remove", "path": "/spec/config/env"}]' 2>/dev/null || true
 else
   oc -n openshift-logging patch subscription cluster-logging --type json \
-    -p "[{\"op\": \"replace\", \"path\": \"/spec/config/env\", \"value\": $ORIGINAL_ENV}]"
+    -p "$(jq -cn --argjson env "$CLEAN_ENV" '[{"op":"replace","path":"/spec/config/env","value":$env}]')"
 fi
 ```
 
