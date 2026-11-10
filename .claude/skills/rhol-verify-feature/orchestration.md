@@ -15,6 +15,10 @@ Orchestrator (main agent, running the skill)
  ├─ Fix-Presence Gate (inline): confirm the fix is actually deployed (fingerprint + provenance,
  │   see SKILL.md Phase 4). On failure → INCONCLUSIVE and STOP before any scaffolding is built:
  │   no receivers, no RBAC, no execution, no Reviewer
+ ├─ Pre-flight validation (inline): before any cluster time, validate the Planner's generated
+ │   artifacts — syntax-check verify.sh, dry-run every manifest against the live CRD, run each
+ │   check command once in isolation (see Pre-flight validation). Authoring/schema/quoting bugs
+ │   fail here for free, not as fake check FAILs mid-run
  ├─ Setup+Execute (inline, via the deterministic verify.sh): deploy receivers / RBAC / SCC /
  │   image-swap (with active bounded self-healing — see Setup resilience), run checks,
  │   persist RAW evidence to the run dir (evidence/*.log)
@@ -48,6 +52,28 @@ to establish presence (fix fingerprint + provenance anchor). On failure the orch
 immediately: it deploys no receivers, RBAC, or log generators, does not dispatch the Reviewer, and
 writes an `INCONCLUSIVE` report naming what the user must deploy. A green CSV version is not fix
 presence.
+
+## Pre-flight validation
+
+Runs inline after the Fix-Presence Gate and **before** Setup+Execute. The Planner's output
+(`verify.sh`, `resources/`, the check commands) is generated, not yet proven to run — validating it
+here costs seconds and catches the failure class that otherwise masquerades as a feature FAIL
+mid-run: a check that fails on a quoting bug, a manifest the apiserver rejects, a container whose
+command never starts. All steps are read-only / dry-run:
+
+1. **Syntax** — `bash -n verify.sh` (and `shellcheck verify.sh` if available).
+2. **Manifests** — `oc apply --dry-run=server -f resources/` for every manifest, so the **live CRD**
+   validates it. This is version-durable: it stays correct as CRD schemas change across operator
+   releases, where a remembered field list silently rots. A rejection here is an authoring bug in
+   this run's scaffolding — fix the manifest and re-validate; never relax the gate to get past it.
+3. **Check commands** — run each `check` command once in isolation against its target (or a
+   throwaway pod) before the timed run depends on it. Commands that `oc exec`/`oc run` into a
+   container, or capture command output, are where shell-quoting and tooling-noise bugs hide — they
+   are invisible until actually executed.
+
+A pre-flight failure is a defect in this run's own scaffolding, not the cluster or the fix: fix and
+re-validate. It is **not** INCONCLUSIVE (nothing about the build under test is in question yet) and
+**not** a feature FAIL.
 
 ## Reviewer dispatch
 
@@ -198,6 +224,26 @@ Every check in the plan specifies:
 - **Evidence level** (`on-cluster` / `by-test` / `gap`), already assigned by the Planner.
 - **Covering test path** (for `by-test`) — the file path and test function name of the existing
   test that covers this criterion.
+
+### Derive resources from workspace sources, not from API memory
+
+Every manifest the plan applies must trace to an authoritative artifact in the workspace, never to
+recalled API shape:
+
+- **Component Deployments** (collector, eventrouter, LFME, test receivers) — start from the
+  component's shipped manifest (`<repo>/yaml/`, `cluster-logging-operator/hack/`, `hack/manifests/`)
+  and override only image, namespace, and labels. The shipped spec already encodes details that are
+  easy to get wrong by hand — e.g. whether the container takes `args` at all depends on the image's
+  CMD/ENTRYPOINT, which the shipped manifest already accounts for (`cross-repo.md` gives the
+  image-override one-liner for the eventrouter manifest).
+- **CLO custom resources** (ClusterLogForwarder, LokiStack, …) — start from a known-good sample
+  (`cluster-logging-operator/config/samples/`, `cluster-logging-operator/docs/reference/samples/`)
+  and modify it. A sample is the current-version source of truth for required fields and object
+  shapes; copying one is more reliable than assembling a spec from memory and survives API-version
+  changes that a remembered schema would not.
+
+The Pre-flight gate's `oc apply --dry-run=server` is the backstop that validates whatever was
+authored against the live CRD before any cluster time is spent.
 
 ### Detailed is not brittle hardcodes
 
@@ -356,6 +402,38 @@ wait_rollout_ds() {
 }
 
 # ---------------------------------------------------------------------------
+# run_with_retry — poll an eval'd command until it succeeds or the timeout
+# elapses, then re-run it ONCE with output visible so the matched lines land in
+# the evidence log (the Reviewer and report cite the same bytes on disk). Only
+# wrap read-only, idempotent checks — the command runs a second time on success.
+# HAZARD: a retry helper that returns only pass/fail leaves evidence/*.log with
+# no raw output, silently breaking the evidence contract (see reporting.md).
+# ---------------------------------------------------------------------------
+run_with_retry() {
+  local timeout="$1"; shift
+  local deadline=$((SECONDS + timeout))
+  while (( SECONDS < deadline )); do
+    if eval "$*" >/dev/null 2>&1; then eval "$*"; return 0; fi
+    sleep 10
+  done
+  eval "$*"
+}
+
+# ---------------------------------------------------------------------------
+# probe_http — get an HTTP status code from inside the cluster via a throwaway
+# pod (collector/receiver images often lack curl; probe from a helper instead).
+# HAZARD: `oc run --rm -i` appends a `pod "x" deleted` notice to stdout, which
+# would corrupt a bare status capture — emit a marker and extract it.
+# ---------------------------------------------------------------------------
+probe_http() {
+  local url="$1"
+  oc run "rhol-probe-$(date +%s%N | tail -c7)" --rm -i --restart=Never -n "$NS" \
+    --image=docker.io/curlimages/curl:latest -- \
+    curl -s -o /dev/null -w 'HTTPCODE:%{http_code}' --connect-timeout 10 "$url" \
+    | grep -oE 'HTTPCODE:[0-9]+' | cut -d: -f2
+}
+
+# ---------------------------------------------------------------------------
 # Namespace tracking — only delete if THIS run created it
 # ---------------------------------------------------------------------------
 CREATED_NS=false
@@ -448,11 +526,17 @@ wait_rollout_ds "${CLF_NAME}"
 check "Collector DaemonSet is fully available" \
   "oc get daemonset '${CLF_NAME}' -n '${NS}' -o jsonpath='{.status.numberAvailable}' | grep -qP '[1-9]'"
 
-# Example AC check: log marker arrives at receiver
-# NOTE: collector/receiver containers may use micro base (no curl). Query receiver HTTP API
-# from a helper pod or oc-side mechanism.
+# Example AC check: log marker arrives at receiver.
+# HAZARD: double quotes inside `sh -c "..."` are eaten as shell syntax across the
+# check()->eval->container-shell layers — use a quote-free regex (`.` matches any char,
+# including a quote) so the pattern survives, e.g. log_type.:.infrastructure.
+# run_with_retry re-runs on success so the matched count is captured as evidence.
 check "Log marker '${MARKER}' delivered to receiver" \
-  "oc exec -n '${NS}' deploy/test-receiver -- sh -c 'grep -r ${MARKER} /var/log/receiver || exit 1'"
+  "run_with_retry 300 'oc exec -n ${NS} deploy/test-receiver -- sh -c \"grep -c ${MARKER} /var/log/receiver\"'"
+
+# Example AC check: an HTTP endpoint returns the expected status (via helper pod).
+check "Service endpoint /metrics returns 200" \
+  '[[ "$(probe_http "http://my-svc.${NS}.svc:8080/metrics")" == "200" ]]'
 
 # ---------------------------------------------------------------------------
 # Summary

@@ -2,7 +2,9 @@
 
 Quick-reference of failure modes seen in real runs. Each row is a mistake and its fix. The
 Fix-Presence Gate and Reviewer entries are the highest-leverage — they protect the verdict's
-trustworthiness.
+trustworthiness. The authoring-source and pre-flight-validation entries are next: most setup-time
+FAILs are not the feature but unvalidated scaffolding, which the pre-flight gate catches for free
+before any cluster time is spent.
 
 | Mistake | Fix |
 |---------|-----|
@@ -32,3 +34,9 @@ trustworthiness.
 | Marking a verified criterion a `gap` because no dedicated test ships | If behavior is confirmed on-cluster or by-test, it is MET. Record the absent regression test under **Recommended test coverage** (verdict-neutral), not Gaps — it must not downgrade the verdict |
 | Self-reviewing the verdict | The Reviewer must be a fresh dispatched subagent with no authoring context |
 | Not saving artifacts to disk | Every run saves `report.md`, `verify.feature`, `verify.sh`, `resources/`, `evidence/` under `docs/reports/features/<LOG-XXXX>/<YYYY-MM-DDThh-mm-ss>/` |
+| Authoring a cluster resource (CR or Deployment) from API knowledge instead of a workspace source | Every manifest must trace to a repo artifact: derive Deployments from the component's shipped manifest (`<repo>/yaml/`, `cluster-logging-operator/hack/`, `hack/manifests/`), and CRs from a known-good sample (`cluster-logging-operator/config/samples/`, `docs/reference/samples/`). Then let the Pre-flight gate's `oc apply --dry-run=server` validate it against the live CRD. "I wrote it from what I know about the API" is not a source and rots across API versions |
+| Giving a Deployment `args`/`command` without checking the image | A CMD-only image (no ENTRYPOINT) treats `args` as a full command replacement — `args: ["-v","3"]` makes the container try to exec `-v`. `podman inspect --format '{{.Config.Entrypoint}} {{.Config.Cmd}}'` the image, or derive the pod spec from the shipped manifest (which already accounts for it) |
+| Quoted pattern inside `oc exec … sh -c "…"` | Double quotes in the `sh -c` string are consumed as shell syntax across the `check()`→`eval`→container-shell layers, silently neutering the match (a FAIL that looks like the feature). Use a quote-free regex where `.` matches the quote char, e.g. `grep -c 'log_type.:.infrastructure'` |
+| Parsing `oc run --rm -i` stdout | It appends a `pod "x" deleted` notice to stdout, corrupting any captured value (e.g. an HTTP status). Emit a distinctive marker (`curl -w 'HTTPCODE:%{http_code}'`) and extract it (`grep -oE 'HTTPCODE:[0-9]+' \| cut -d: -f2`) — see the `probe_http` helper in the `verify.sh` template |
+| A retry/poll helper that captures no raw output | A helper returning only pass/fail leaves `evidence/*.log` with no bytes for the Reviewer to cite. Re-run the command once on success with output visible (see `run_with_retry` in the template); only wrap read-only, idempotent checks |
+| Spending cluster time on unvalidated scaffolding | Run the Pre-flight gate first (`orchestration.md §Pre-flight validation`): `bash -n verify.sh`, `oc apply --dry-run=server -f resources/`, and each check command once in isolation. Authoring, schema, quoting, and tooling-noise bugs surface here at zero cluster cost instead of as fake check FAILs mid-run |

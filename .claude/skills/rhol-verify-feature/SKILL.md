@@ -127,8 +127,8 @@ oc get crd clusterlogforwarders.observability.openshift.io -o yaml \
 
 ### Step 4b: Capture the provenance anchor (install-method aware)
 
-Record *which build is running* so the run is traceable. The command depends on how the operator was
-installed — ask the user if unknown:
+Record *which build is running* (traceability). Command depends on the install method — ask the user
+if unknown:
 
 ```bash
 # OLM / custom bundle / `make deploy` (image-based): capture the DIGEST, not the tag
@@ -155,9 +155,6 @@ Options:
   2. `make run`    — run the operator locally against the cluster
   3. Skip         — I'll deploy it myself
 ```
-
-For cross-repo image overrides, the swapped component (Step 4b.5) is the subject under test — its
-image digest is the provenance anchor; verify that digest is actually running on the target pods.
 
 ### Step 4b.5: Swap custom images (if image overrides were provided)
 
@@ -215,6 +212,7 @@ rationalization this gate forbids) — assert the fingerprint or commit ancestry
 See companion files; do not re-derive:
 
 - **Plan (5):** `orchestration.md §Plan detail standard` + `reporting.md §Evidence taxonomy`
+- **Pre-flight (5.5):** `orchestration.md §Pre-flight validation` — `bash -n`, dry-run every manifest, isolated check runs, before cluster time
 - **Execute (6):** `orchestration.md §The delegate pipeline`; receivers → `receivers.md`; log generators + per-component patterns → `cross-repo.md`
 - **Reproduction script (7):** `orchestration.md §The delegate pipeline` (Planner output)
 - **Cleanup + report (8):** `reporting.md §Report template`. Save `report.md`, `verify.feature`, `verify.sh`, `resources/`, `evidence/` under `docs/reports/features/<LOG-XXXX>/<YYYY-MM-DDThh-mm-ss>/`
@@ -223,7 +221,7 @@ See companion files; do not re-derive:
 
 ## Common Mistakes
 
-The full failure-mode reference (~25 mistakes with fixes) lives in **`pitfalls.md`** — read it before
+The full failure-mode reference (~30 mistakes with fixes) lives in **`pitfalls.md`** — read it before
 building resources and again before writing the report. The highest-leverage entries guard the
-Fix-Presence Gate, `CLF_NAME`-derived naming, labeled-RBAC cleanup, evidence-to-check mapping, and
-the fresh-context Reviewer.
+Fix-Presence Gate, the Pre-flight gate, workspace-sourced resources, `CLF_NAME`-derived naming,
+labeled-RBAC cleanup, evidence-to-check mapping, and the fresh-context Reviewer.
