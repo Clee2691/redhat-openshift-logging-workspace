@@ -18,7 +18,8 @@ REPOS = \
     openshift/logging-view-plugin \
     openshift/openshift-docs \
     openshift-eng/openshift-logging-e2e-tests \
-    openshift/release
+    openshift/release \
+    openshift-eng/ocp-build-data
 
 REPO_DIRS = $(foreach r,$(REPOS),$(notdir $(r)))
 

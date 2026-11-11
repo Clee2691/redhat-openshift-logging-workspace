@@ -44,6 +44,8 @@ Maps product concerns to the repositories and files that own them. Use this to q
 | Product documentation | `openshift-docs/` | `modules/`, `assemblies/` |
 | Feature support status (GA/TP) | `openshift-docs/` | grep for "Technology Preview" in `modules/` |
 | Data model documentation | External | `github.com/rhobs/observability-data-model` |
+| Product release stream configuration (ART) | `ocp-build-data/` (branch `logging-<X.Y>`, e.g. `logging-6.7`) | `releases.yml`, `streams.yml`, `group.yml` |
+| Product image release definition (per component) | `ocp-build-data/` (branch `logging-<X.Y>`) | `images/<component>.yml` (e.g. `images/vector.yml`, `images/cluster-logging-operator.yml`) |
 
 ## Cross-Repo Change Patterns
 
@@ -57,3 +59,4 @@ Maps product concerns to the repositories and files that own them. Use this to q
 | Data model change | `cluster-logging-operator/` (data model), `logging-view-plugin/` (UI parsing), `openshift-docs/` (docs) |
 | Vector upstream update | `vector/` (upstream), `cluster-logging-operator/` (config generation may need updates) |
 | Exporter metric/label change | `log-file-metric-exporter/` (binary), `cluster-logging-operator/` (DaemonSet + scrape config), `openshift-docs/` (documentation) |
+| Product release change (add/update a component image in a stream) | `ocp-build-data/` (branch `logging-<X.Y>`, `images/<component>.yml`, `releases.yml`) |

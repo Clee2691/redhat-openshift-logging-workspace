@@ -16,6 +16,7 @@ Cross-repo workspace for Red Hat OpenShift Logging — shared specs, routing, an
 | [logging-ui-plugin](https://github.com/openshift/logging-view-plugin)                                          | Logging OpenShift UI plugin                                   |
 | [openshift-logging-e2e-tests](https://github.com/openshift-eng/openshift-logging-e2e-tests)                    | E2E tests for OpenShift Logging                               |
 | [release](https://github.com/openshift/release)                                                                | OpenShift CI jobs for the logging repos in ci-operator/config/openshift/cluster-logging-operator, openshift/loki, openshift-eng/openshift-logging-e2e-tests, viaq/vector, viaq/log-file-metric-exporter, openshift/logging-view-plugin, openshift/eventrouter |
+| [ocp-build-data](https://github.com/openshift-eng/ocp-build-data)                                              | Product release (ART) configuration. Each product stream lives on its own branch named `logging-<X.Y>` (e.g. `logging-6.7`); a stream branch contains `releases.yml`, `streams.yml`, `group.yml`, and `images/<component>.yml` |
 
 ## Setup
 
@@ -26,6 +27,8 @@ make clone-repos
 ```
 
 Repos are cloned over SSH (`git@github.com:`), so a GitHub SSH key must be configured.
+
+`ocp-build-data` is cloned on its default branch; check out the product stream branch you need (e.g. `git -C ocp-build-data checkout logging-6.7`).
 
 Pull latest changes in all repos:
 
