@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Standalone entry point for the RHOL z-stream version incrementer — usable
+# directly from a shell without loading the skill. Dispatches to the
+# per-component bump scripts shipped with the
+# rhol-version-incrementer skill.
+#
+# Usage:
+#   rhol-version-incrementer --component <component> [target-version] [repo-path] [--dry-run] [--pr]
+#
+#   component: operator | cluster-logging-operator | clo
+#              lfme | log-file-metric-exporter
+#              eventrouter
+#              loki | loki-operator
+#   target-version: optional; defaults to current patch version + 1
+#   repo-path: optional; defaults to <workspace>/<canonical-repo-name>
+#   --dry-run: print planned edits without modifying files
+#   --pr:      edit + commit + push to fork + open PR in one run
+#
+# Examples:
+#   rhol-version-incrementer --component lfme
+#   rhol-version-incrementer -c operator 6.6.3 --dry-run
+#   rhol-version-incrementer -c eventrouter "" /path/to/repo --pr
+
+set -euo pipefail
+
+COMPONENT=""
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -c|--component)
+      [[ -n "${2:-}" ]] || { echo "ERROR: --component requires a value" >&2; exit 1; }
+      COMPONENT="$2"; shift 2 ;;
+    -c*)
+      COMPONENT="${1#-c}"; shift ;;
+    --component=*)
+      COMPONENT="${1#*=}"; shift ;;
+    -h|--help)
+      grep '^#' "$0" | grep -v '^#!' | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *)
+      POSITIONAL+=("$1"); shift ;;
+  esac
+done
+
+[[ -z "$COMPONENT" ]] && { grep '^#' "$0" | grep -v '^#!' | sed 's/^# \{0,1\}//' >&2; exit 1; }
+
+# Resolve symlinks so dispatch works regardless of how the script is invoked.
+SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(cd "$(dirname "$SELF")" && pwd)"
+
+case "$COMPONENT" in
+  operator|cluster-logging-operator|clo)  SCRIPT="$SCRIPT_DIR/bump-operator.sh" ;;
+  lfme|log-file-metric-exporter)          SCRIPT="$SCRIPT_DIR/bump-lfme.sh" ;;
+  eventrouter)                            SCRIPT="$SCRIPT_DIR/bump-eventrouter.sh" ;;
+  loki|loki-operator)                     SCRIPT="$SCRIPT_DIR/bump-loki-operator.sh" ;;
+  *)
+    echo "ERROR: unknown component '$COMPONENT' (expected operator|lfme|eventrouter|loki)" >&2; exit 1 ;;
+esac
+
+exec bash "$SCRIPT" "${POSITIONAL[@]+"${POSITIONAL[@]}"}"
