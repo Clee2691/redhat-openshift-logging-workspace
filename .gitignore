@@ -11,3 +11,6 @@ vector/
 
 worktrees/
 .claude/settings.local.json
+.zstream-validation/
+__pycache__/
+.claude/skills/rhol-zstream-validation/scripts/tests/

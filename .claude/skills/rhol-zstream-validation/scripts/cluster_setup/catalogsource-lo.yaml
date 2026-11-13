@@ -1,0 +1,13 @@
+# CatalogSource serving the loki-operator FBC image, digest-pinned.
+# __FBC_IMAGE_LO__ is filled by deploy.sh from the current build batch in
+# state (quay.io/.../art-fbc@sha256:<digest> — art-fbc pulls anonymously).
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: zstream-validation-lo
+  namespace: openshift-marketplace
+spec:
+  sourceType: grpc
+  image: __FBC_IMAGE_LO__
+  displayName: zstream-validation loki-operator
+  publisher: zstream-validation

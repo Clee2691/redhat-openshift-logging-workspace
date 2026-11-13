@@ -1,0 +1,32 @@
+# LO install shape 2 of 2: ALLNAMESPACES-ONLY (spike-validated 2026-11-12
+# against loki 6.5.4 — OwnNamespace/SingleNamespace/MultiNamespace are all
+# unsupported). Subscribes cluster-wide, conventionally in
+# openshift-operators-redhat; an empty OperatorGroup spec means AllNamespaces.
+# __LO_CHANNEL__ / __LO_STARTING_CSV__ are filled by deploy.sh
+# (stable-<major>.<minor> / loki-operator.v<target>).
+# NOTE: deploy.sh skips the OperatorGroup doc if one already exists in the
+# namespace — two OperatorGroups in one namespace conflict.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-operators-redhat
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: openshift-operators-redhat
+  namespace: openshift-operators-redhat
+spec: {}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: loki-operator
+  namespace: openshift-operators-redhat
+spec:
+  channel: __LO_CHANNEL__
+  name: loki-operator
+  source: zstream-validation-lo
+  sourceNamespace: openshift-marketplace
+  startingCSV: __LO_STARTING_CSV__
+  installPlanApproval: Automatic

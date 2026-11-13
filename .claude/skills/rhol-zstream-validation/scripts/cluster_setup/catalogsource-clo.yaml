@@ -1,0 +1,14 @@
+# CatalogSource serving the cluster-logging FBC image, digest-pinned.
+# __FBC_IMAGE_CLO__ is filled by deploy.sh from the current build batch in
+# state (quay.io/.../art-fbc@sha256:<digest> — art-fbc pulls anonymously).
+# No registryPoll: the digest is pinned, re-polling cannot change anything.
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: zstream-validation-clo
+  namespace: openshift-marketplace
+spec:
+  sourceType: grpc
+  image: __FBC_IMAGE_CLO__
+  displayName: zstream-validation cluster-logging
+  publisher: zstream-validation

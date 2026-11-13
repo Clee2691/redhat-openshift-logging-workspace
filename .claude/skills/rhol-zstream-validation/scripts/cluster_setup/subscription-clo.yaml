@@ -1,0 +1,30 @@
+# CLO install shape 1 of 2: NAMESPACED (spike-validated 2026-11-11).
+# Namespace + OperatorGroup + Subscription all in openshift-logging.
+# __CLO_CHANNEL__ / __CLO_STARTING_CSV__ are filled by deploy.sh
+# (stable-<major>.<minor> / cluster-logging.v<target>).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-logging
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: openshift-logging
+  namespace: openshift-logging
+spec:
+  targetNamespaces:
+  - openshift-logging
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: cluster-logging
+  namespace: openshift-logging
+spec:
+  channel: __CLO_CHANNEL__
+  name: cluster-logging
+  source: zstream-validation-clo
+  sourceNamespace: openshift-marketplace
+  startingCSV: __CLO_STARTING_CSV__
+  installPlanApproval: Automatic
